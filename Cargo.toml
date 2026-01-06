@@ -1,0 +1,37 @@
+[package]
+name = "development-mcp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+my-http-server = { tag = "0.8.3", git = "https://github.com/MyJetTools/my-http-server.git", features = [
+    "static-files",
+    "macros",
+] }
+
+rust-extensions = { tag = "0.1.5", git = "https://github.com/MyJetTools/rust-extensions.git", features = [
+    "with-tokio",
+] }
+
+my-ai-agent = { tag = "0.1.0", git = "https://github.com/my-ai-utils/my-ai-agent.git", features = [
+    "agent",
+] }
+
+my-settings-reader = { tag = "0.4.1", git = "https://github.com/MyJetTools/my-settings-reader.git", features = [
+    "background-reader",
+] }
+
+mcp-server-middleware = { tag = "0.8.3", git = "https://github.com/my-ai-utils/mcp-server-middleware.git" }
+
+my-logger = { tag = "1.2.1", git = "https://github.com/MyJetTools/my-logger.git" }
+
+my-tls = { tag = "0.1.5", git = "https://github.com/MyJetTools/my-tls.git" }
+
+tokio = { version = "*", features = ["full"] }
+
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+
+async-trait = "*"
+
+flurl = { tag = "0.6.1", git = "https://github.com/MyJetTools/fl-url.git" }
