@@ -6,7 +6,7 @@ use my_http_server::MyHttpServer;
 
 use crate::{
     app::AppContext,
-    mcp::{FlUrlPrompt, McpPrompt},
+    mcp::{FlUrlResource, McpResource},
 };
 
 pub async fn start(app: &Arc<AppContext>) {
@@ -19,8 +19,8 @@ pub async fn start(app: &Arc<AppContext>) {
         "Provides access to devops tools",
     );
 
-    mcp.register_prompt(Arc::new(McpPrompt)).await;
-    mcp.register_prompt(Arc::new(FlUrlPrompt)).await;
+    mcp.register_resource(Arc::new(McpResource)).await;
+    mcp.register_resource(Arc::new(FlUrlResource)).await;
 
     http_server.add_middleware(Arc::new(mcp));
 

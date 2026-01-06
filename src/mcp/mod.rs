@@ -1,4 +1,4 @@
-mod mcp_prompt;
-pub use mcp_prompt::*;
-mod flurl_prompt;
-pub use flurl_prompt::*;
+mod mcp_resource;
+pub use mcp_resource::*;
+mod flurl_resource;
+pub use flurl_resource::*;

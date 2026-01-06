@@ -1,28 +1,31 @@
-use std::collections::HashMap;
-
 use mcp_server_middleware::*;
 
-pub struct McpPrompt;
+pub struct McpResource;
 
-impl PromptDefinition for McpPrompt {
-    const PROMPT_NAME: &'static str = "mcp_development";
-    const DESCRIPTION: &'static str = "Creating Prompts and Tool Calls";
-    fn get_argument_descriptions() -> Vec<PromptArgumentDescription> {
-        vec![]
-    }
+impl ResourceDefinition for McpResource {
+    const RESOURCE_URI: &'static str = "resource://mcp-development-guide";
+    const RESOURCE_NAME: &'static str = "MCP Development Guide";
+    const DESCRIPTION: &'static str = "Guide for creating Prompts and Tool Calls";
+    const MIME_TYPE: &'static str = "text/markdown";
 }
 
 #[async_trait::async_trait]
-impl McpPromptService for McpPrompt {
-    async fn execute_prompt(
-        &self,
-        _model: &HashMap<String, String>,
-    ) -> Result<PromptExecutionResult, String> {
-        let result = PromptExecutionResult {
-            description: "Creating Prompts and Tool Calls".to_string(),
-            message: PROMPT_DATA.to_string(),
+impl McpResourceService for McpResource {
+    async fn read_resource(&self, uri: &str) -> Result<ResourceReadResult, String> {
+        if uri != Self::RESOURCE_URI {
+            return Err(format!("Unknown resource URI: {}", uri));
+        }
+
+        let content = ResourceContent {
+            uri: Self::RESOURCE_URI.to_string(),
+            mime_type: Self::MIME_TYPE.to_string(),
+            text: Some(PROMPT_DATA.to_string()),
+            blob: None,
         };
-        return Ok(result);
+
+        Ok(ResourceReadResult {
+            contents: vec![content],
+        })
     }
 }
 
