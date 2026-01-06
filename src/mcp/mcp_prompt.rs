@@ -130,7 +130,7 @@ impl McpToolCall<YourToolInputData, YourToolResponse> for YourToolHandler {
         println!("Executing tool with params: {:?}", model);
         
         // Your implementation here
-        // Access app context: self.app.settings_reader, etc.
+        // Access app context: self.app.app_states, etc.
         
         let result = YourToolResponse {
             result: "Success".to_string(),
@@ -146,7 +146,7 @@ impl McpToolCall<YourToolInputData, YourToolResponse> for YourToolHandler {
 - The trait is async, so you can perform async operations
 - Return `Ok(YourToolResponse)` on success
 - Return `Err(String)` on failure (the error message will be sent to the client)
-- You have access to `self.app` for accessing settings, app state, etc.
+- You have access to `self.app` for accessing app state, etc.
 
 ### Step 6: Export in mod.rs
 
@@ -471,7 +471,6 @@ http_server.add_middleware(Arc::new(mcp));
    - Document complex logic in comments
 
 4. **Accessing App Context:**
-   - Use `self.app.settings_reader` for configuration
    - Use `self.app.app_states` for application state
    - If you don't need app context, use `_app` to avoid warnings
 
