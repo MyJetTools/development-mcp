@@ -4,7 +4,7 @@ use mcp_server_middleware::*;
 pub struct AppBootstrapResource;
 
 impl ResourceDefinition for AppBootstrapResource {
-    const RESOURCE_URI: &'static str = "resource://development/app-bootstrap";
+    const RESOURCE_URI: &'static str = "resource://app-bootstrap";
     const RESOURCE_NAME: &'static str = "App Bootstrap Guide";
     const DESCRIPTION: &'static str = "Step-by-step instructions for bootstrapping a new project";
     const MIME_TYPE: &'static str = "text/markdown";

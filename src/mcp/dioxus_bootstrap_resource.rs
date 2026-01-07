@@ -4,7 +4,7 @@ use mcp_server_middleware::*;
 pub struct DioxusBootstrapResource;
 
 impl ResourceDefinition for DioxusBootstrapResource {
-    const RESOURCE_URI: &'static str = "resource://development/dioxus-bootstrap";
+    const RESOURCE_URI: &'static str = "resource://dioxus-bootstrap";
     const RESOURCE_NAME: &'static str = "Dioxus Fullstack Bootstrap Guide";
     const DESCRIPTION: &'static str =
         "Step-by-step instructions for bootstrapping a new empty Dioxus fullstack web application";

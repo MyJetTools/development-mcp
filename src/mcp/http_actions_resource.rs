@@ -4,7 +4,7 @@ use mcp_server_middleware::*;
 pub struct HttpActionsResource;
 
 impl ResourceDefinition for HttpActionsResource {
-    const RESOURCE_URI: &'static str = "resource://development/http-actions-design-guide";
+    const RESOURCE_URI: &'static str = "resource://http-actions-design-guide";
     const RESOURCE_NAME: &'static str = "HTTP Actions Design Guide";
     const DESCRIPTION: &'static str = "Guide for HTTP action architecture and patterns";
     const MIME_TYPE: &'static str = "text/markdown";

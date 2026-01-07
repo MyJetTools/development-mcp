@@ -4,7 +4,7 @@ use mcp_server_middleware::*;
 pub struct FlUrlResource;
 
 impl ResourceDefinition for FlUrlResource {
-    const RESOURCE_URI: &'static str = "resource://development/flurl-usage-guide";
+    const RESOURCE_URI: &'static str = "resource://flurl-usage-guide";
     const RESOURCE_NAME: &'static str = "FlUrl Usage Guide";
     const DESCRIPTION: &'static str = "How to use FlUrl library";
     const MIME_TYPE: &'static str = "text/markdown";

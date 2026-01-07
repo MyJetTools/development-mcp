@@ -3,7 +3,7 @@ use mcp_server_middleware::*;
 pub struct McpResource;
 
 impl ResourceDefinition for McpResource {
-    const RESOURCE_URI: &'static str = "resource://development/mcp-development-guide";
+    const RESOURCE_URI: &'static str = "resource://mcp-development-guide";
     const RESOURCE_NAME: &'static str = "MCP Development Guide";
     const DESCRIPTION: &'static str = "Guide for creating Prompts and Tool Calls";
     const MIME_TYPE: &'static str = "text/markdown";
