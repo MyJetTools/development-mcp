@@ -8,3 +8,5 @@ mod app_bootstrap_resource;
 pub use app_bootstrap_resource::*;
 mod dioxus_bootstrap_resource;
 pub use dioxus_bootstrap_resource::*;
+mod cargo_dependencies_resource;
+pub use cargo_dependencies_resource::*;

@@ -22,6 +22,8 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(AppBootstrapResource)).await;
     mcp.register_resource(Arc::new(DioxusBootstrapResource))
         .await;
+    mcp.register_resource(Arc::new(CargoDependenciesResource))
+        .await;
 
     http_server.add_middleware(Arc::new(mcp));
 
