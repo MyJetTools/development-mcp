@@ -6,7 +6,7 @@ use my_http_server::MyHttpServer;
 
 use crate::{
     app::AppContext,
-    mcp::{FlUrlResource, McpResource},
+    mcp::{FlUrlResource, HttpActionsResource, McpResource},
 };
 
 pub async fn start(app: &Arc<AppContext>) {
@@ -21,6 +21,7 @@ pub async fn start(app: &Arc<AppContext>) {
 
     mcp.register_resource(Arc::new(McpResource)).await;
     mcp.register_resource(Arc::new(FlUrlResource)).await;
+    mcp.register_resource(Arc::new(HttpActionsResource)).await;
 
     http_server.add_middleware(Arc::new(mcp));
 

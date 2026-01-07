@@ -1,30 +1,30 @@
 use flurl::FlUrl;
 use mcp_server_middleware::*;
 
-pub struct FlUrlResource;
+pub struct HttpActionsResource;
 
-impl ResourceDefinition for FlUrlResource {
-    const RESOURCE_URI: &'static str = "resource://development/flurl-usage-guide";
-    const RESOURCE_NAME: &'static str = "FlUrl Usage Guide";
-    const DESCRIPTION: &'static str = "How to use FlUrl library";
+impl ResourceDefinition for HttpActionsResource {
+    const RESOURCE_URI: &'static str = "resource://development/http-actions-design-guide";
+    const RESOURCE_NAME: &'static str = "HTTP Actions Design Guide";
+    const DESCRIPTION: &'static str = "Guide for HTTP action architecture and patterns";
     const MIME_TYPE: &'static str = "text/markdown";
 }
 
 #[async_trait::async_trait]
-impl McpResourceService for FlUrlResource {
+impl McpResourceService for HttpActionsResource {
     async fn read_resource(&self, uri: &str) -> Result<ResourceReadResult, String> {
         if uri != Self::RESOURCE_URI {
             return Err(format!("Unknown resource URI: {}", uri));
         }
 
-        const README_URL: &str =
-            "https://raw.githubusercontent.com/MyJetTools/fl-url/refs/heads/main/README.md";
+        const HTTP_ACTIONS_URL: &str =
+            "https://raw.githubusercontent.com/MyJetTools/my-http-server/refs/heads/main/HTTP_ACTIONS_DESIGN.md";
 
-        // Fetch the README content using FlUrl
-        let mut response = FlUrl::new(README_URL)
+        // Fetch the HTTP Actions Design content using FlUrl
+        let mut response = FlUrl::new(HTTP_ACTIONS_URL)
             .get()
             .await
-            .map_err(|e| format!("Failed to fetch FlUrl README: {:?}", e))?;
+            .map_err(|e| format!("Failed to fetch HTTP Actions Design: {:?}", e))?;
 
         let content_str = response
             .get_body_as_str()
