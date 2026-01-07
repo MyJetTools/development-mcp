@@ -10,3 +10,5 @@ mod dioxus_bootstrap_resource;
 pub use dioxus_bootstrap_resource::*;
 mod cargo_dependencies_resource;
 pub use cargo_dependencies_resource::*;
+mod my_ssh_resource;
+pub use my_ssh_resource::*;
