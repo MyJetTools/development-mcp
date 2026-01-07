@@ -4,3 +4,7 @@ mod flurl_resource;
 pub use flurl_resource::*;
 mod http_actions_resource;
 pub use http_actions_resource::*;
+mod app_bootstrap_resource;
+pub use app_bootstrap_resource::*;
+mod dioxus_bootstrap_resource;
+pub use dioxus_bootstrap_resource::*;

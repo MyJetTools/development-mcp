@@ -4,10 +4,7 @@ use mcp_server_middleware::*;
 
 use my_http_server::MyHttpServer;
 
-use crate::{
-    app::AppContext,
-    mcp::{FlUrlResource, HttpActionsResource, McpResource},
-};
+use crate::{app::AppContext, mcp::*};
 
 pub async fn start(app: &Arc<AppContext>) {
     let mut http_server = MyHttpServer::new(SocketAddr::from(([0, 0, 0, 0], 8000)));
@@ -22,6 +19,9 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(McpResource)).await;
     mcp.register_resource(Arc::new(FlUrlResource)).await;
     mcp.register_resource(Arc::new(HttpActionsResource)).await;
+    mcp.register_resource(Arc::new(AppBootstrapResource)).await;
+    mcp.register_resource(Arc::new(DioxusBootstrapResource))
+        .await;
 
     http_server.add_middleware(Arc::new(mcp));
 

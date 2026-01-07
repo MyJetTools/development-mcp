@@ -1,0 +1,2 @@
+# Disable validation for GitHub Actions workflows
+validate: false
