@@ -1,4 +1,4 @@
-use flurl::FlUrl;
+use crate::mcp::scripts::load_resource_by_http;
 use mcp_server_middleware::*;
 
 pub struct DioxusBootstrapResource;
@@ -21,26 +21,6 @@ impl McpResourceService for DioxusBootstrapResource {
         const DIOXUS_BOOTSTRAP_URL: &str =
             "https://raw.githubusercontent.com/amigin/ai-templates/refs/heads/main/cursor/bootstrap-empty-dioxus-fullstack-project.mdc";
 
-        // Fetch the Dioxus bootstrap guide content using FlUrl
-        let mut response = FlUrl::new(DIOXUS_BOOTSTRAP_URL)
-            .get()
-            .await
-            .map_err(|e| format!("Failed to fetch Dioxus Bootstrap guide: {:?}", e))?;
-
-        let content_str = response
-            .get_body_as_str()
-            .await
-            .map_err(|e| format!("Failed to read response body: {:?}", e))?;
-
-        let result = ResourceContent {
-            uri: Self::RESOURCE_URI.to_string(),
-            mime_type: Self::MIME_TYPE.to_string(),
-            text: Some(content_str.to_string()),
-            blob: None,
-        };
-
-        Ok(ResourceReadResult {
-            contents: vec![result],
-        })
+        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, DIOXUS_BOOTSTRAP_URL).await
     }
 }

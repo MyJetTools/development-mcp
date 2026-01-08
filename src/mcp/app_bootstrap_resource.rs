@@ -1,4 +1,4 @@
-use flurl::FlUrl;
+use crate::mcp::scripts::load_resource_by_http;
 use mcp_server_middleware::*;
 
 pub struct AppBootstrapResource;
@@ -20,26 +20,6 @@ impl McpResourceService for AppBootstrapResource {
         const BOOTSTRAP_URL: &str =
             "https://raw.githubusercontent.com/MyJetTools/service-sdk/refs/heads/main/APP_BOOTSTRAP.md";
 
-        // Fetch the bootstrap guide content using FlUrl
-        let mut response = FlUrl::new(BOOTSTRAP_URL)
-            .get()
-            .await
-            .map_err(|e| format!("Failed to fetch App Bootstrap guide: {:?}", e))?;
-
-        let content_str = response
-            .get_body_as_str()
-            .await
-            .map_err(|e| format!("Failed to read response body: {:?}", e))?;
-
-        let result = ResourceContent {
-            uri: Self::RESOURCE_URI.to_string(),
-            mime_type: Self::MIME_TYPE.to_string(),
-            text: Some(content_str.to_string()),
-            blob: None,
-        };
-
-        Ok(ResourceReadResult {
-            contents: vec![result],
-        })
+        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, BOOTSTRAP_URL).await
     }
 }

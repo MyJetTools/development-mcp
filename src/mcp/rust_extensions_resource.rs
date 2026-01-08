@@ -1,25 +1,25 @@
 use crate::mcp::scripts::load_resource_by_http;
 use mcp_server_middleware::*;
 
-pub struct MySshResource;
+pub struct RustExtensionsResource;
 
-impl ResourceDefinition for MySshResource {
-    const RESOURCE_URI: &'static str = "resource://my-ssh-readme";
-    const RESOURCE_NAME: &'static str = "Ssh connections design library";
+impl ResourceDefinition for RustExtensionsResource {
+    const RESOURCE_URI: &'static str = "resource://rust-extensions";
+    const RESOURCE_NAME: &'static str = "rust-extensions for each project";
     const DESCRIPTION: &'static str =
-        "Async SSH helpers for commands, file transfer, and port forwarding.";
+        "Low-level utils, queues and other helpers to glue together Rust code";
     const MIME_TYPE: &'static str = "text/markdown";
 }
 
 #[async_trait::async_trait]
-impl McpResourceService for MySshResource {
+impl McpResourceService for RustExtensionsResource {
     async fn read_resource(&self, uri: &str) -> Result<ResourceReadResult, String> {
         if uri != Self::RESOURCE_URI {
             return Err(format!("Unknown resource URI: {}", uri));
         }
 
         const README_URL: &str =
-            "https://raw.githubusercontent.com/MyJetTools/my-ssh/main/README.md";
+            "https://raw.githubusercontent.com/MyJetTools/rust-extensions/main/README.md";
 
         load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, README_URL).await
     }

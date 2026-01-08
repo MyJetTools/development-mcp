@@ -1,6 +1,7 @@
 mod mcp_resource;
 pub use mcp_resource::*;
 mod flurl_resource;
+pub mod scripts;
 pub use flurl_resource::*;
 mod http_actions_resource;
 pub use http_actions_resource::*;
@@ -14,3 +15,5 @@ mod my_ssh_resource;
 pub use my_ssh_resource::*;
 mod my_tcp_sockets_resource;
 pub use my_tcp_sockets_resource::*;
+mod rust_extensions_resource;
+pub use rust_extensions_resource::*;
