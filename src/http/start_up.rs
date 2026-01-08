@@ -25,6 +25,7 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(CargoDependenciesResource))
         .await;
     mcp.register_resource(Arc::new(MySshResource)).await;
+    mcp.register_resource(Arc::new(MyTcpSocketsResource)).await;
 
     http_server.add_middleware(Arc::new(mcp));
 

@@ -12,3 +12,5 @@ mod cargo_dependencies_resource;
 pub use cargo_dependencies_resource::*;
 mod my_ssh_resource;
 pub use my_ssh_resource::*;
+mod my_tcp_sockets_resource;
+pub use my_tcp_sockets_resource::*;

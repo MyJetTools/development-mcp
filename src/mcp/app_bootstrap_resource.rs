@@ -18,7 +18,7 @@ impl McpResourceService for AppBootstrapResource {
         }
 
         const BOOTSTRAP_URL: &str =
-            "https://raw.githubusercontent.com/amigin/ai-templates/refs/heads/main/cursor/APP_BOOTSTRAP.mdc";
+            "https://raw.githubusercontent.com/MyJetTools/service-sdk/refs/heads/main/APP_BOOTSTRAP.md";
 
         // Fetch the bootstrap guide content using FlUrl
         let mut response = FlUrl::new(BOOTSTRAP_URL)

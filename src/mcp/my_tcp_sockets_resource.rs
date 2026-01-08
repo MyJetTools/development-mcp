@@ -1,31 +1,31 @@
 use flurl::FlUrl;
 use mcp_server_middleware::*;
 
-pub struct MySshResource;
+pub struct MyTcpSocketsResource;
 
-impl ResourceDefinition for MySshResource {
-    const RESOURCE_URI: &'static str = "resource://my-ssh-readme";
-    const RESOURCE_NAME: &'static str = "Ssh connections design library";
+impl ResourceDefinition for MyTcpSocketsResource {
+    const RESOURCE_URI: &'static str = "resource://tcp-sockets-design-library";
+    const RESOURCE_NAME: &'static str = "TcpSockets design library";
     const DESCRIPTION: &'static str =
-        "Async SSH helpers for commands, file transfer, and port forwarding.";
+        "Async TCP server/client building blocks with ping/pong and TLS options";
     const MIME_TYPE: &'static str = "text/markdown";
 }
 
 #[async_trait::async_trait]
-impl McpResourceService for MySshResource {
+impl McpResourceService for MyTcpSocketsResource {
     async fn read_resource(&self, uri: &str) -> Result<ResourceReadResult, String> {
         if uri != Self::RESOURCE_URI {
             return Err(format!("Unknown resource URI: {}", uri));
         }
 
         const README_URL: &str =
-            "https://raw.githubusercontent.com/MyJetTools/my-ssh/main/README.md";
+            "https://raw.githubusercontent.com/MyJetTools/my-tcp-sockets/refs/heads/main/README.md";
 
-        // Fetch the My SSH README content using FlUrl
+        // Fetch the My TCP Sockets README content using FlUrl
         let mut response = FlUrl::new(README_URL)
             .get()
             .await
-            .map_err(|e| format!("Failed to fetch My SSH README: {:?}", e))?;
+            .map_err(|e| format!("Failed to fetch My TCP Sockets README: {:?}", e))?;
 
         let content_str = response
             .get_body_as_str()
