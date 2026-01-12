@@ -8,13 +8,14 @@ Applies to Dioxus **fullstack** projects (shared code server/web). Use these whe
 - Use `cs` for writes (`cs.write().field = value`) and `cs_ra` for reads in the render phase.
 
 ### 0) Shared models (client + server)
-- Keep all request/response and shared view models in `src/models` so both client (wasm) and server reuse the same types.
+- **Rule**: If a struct is used both on server **and** client (e.g., returned from a server function and rendered in UI) → put it in `src/models`.
+- **Rule**: If a struct is only used inside a server function (e.g., parsing an external API response) → keep it private in the `src/api/*.rs` file, gated with `#[cfg(feature = "server")]`.
 - Derive `Serialize`/`Deserialize` for anything crossing the wire; keep structs minimal and web-safe.
 - If a model is used in `http_route` responses (server-only), also derive `MyHttpObjectStructure` when required by your HTTP doc tooling; otherwise `Serialize`/`Deserialize` is enough.
-- Abstract examples:
-  - `ItemDto` returned by server functions and rendered in lists/dialogs.
-  - `AvailabilityCheckResponse` returned by a server function and shown in a dialog status line.
-  - `InputValue<T>` (or similar helper) shared to keep parsing/validation logic consistent across components.
+- **Examples**:
+  - `BinanceInstrumentCheckResponse` → in `src/models` (returned to client, shown in dialog)
+  - `BinanceExchangeInfo`, `BinanceSymbolInfo` → private in `src/api/binance.rs` with `#[cfg(feature = "server")]` (only used to parse Binance API response)
+  - `InputValue<T>` → in `src/models` (shared validation helper used in components)
 
 ### 1) Dialogs: lifecycle and rendering
 - Keep a global `DialogState` in context (`Signal<DialogState>`). Define variants per dialog (`Confirmation`, `EditInstrument`, etc.).
