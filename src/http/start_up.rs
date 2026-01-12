@@ -28,6 +28,7 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(MyTcpSocketsResource)).await;
     mcp.register_resource(Arc::new(RustExtensionsResource))
         .await;
+    mcp.register_resource(Arc::new(MyPostgresResource)).await;
 
     http_server.add_middleware(Arc::new(mcp));
 

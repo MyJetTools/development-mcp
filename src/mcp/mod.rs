@@ -17,3 +17,5 @@ mod my_tcp_sockets_resource;
 pub use my_tcp_sockets_resource::*;
 mod rust_extensions_resource;
 pub use rust_extensions_resource::*;
+mod my_postgres_resource;
+pub use my_postgres_resource::*;
