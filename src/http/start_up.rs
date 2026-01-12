@@ -28,6 +28,8 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(MyTcpSocketsResource)).await;
     mcp.register_resource(Arc::new(RustExtensionsResource))
         .await;
+    mcp.register_resource(Arc::new(DioxusFullstackPatternsResource))
+        .await;
     mcp.register_resource(Arc::new(CiUtilsResource)).await;
     mcp.register_resource(Arc::new(MyPostgresResource)).await;
 
