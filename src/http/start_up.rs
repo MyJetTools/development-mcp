@@ -30,6 +30,8 @@ pub async fn start(app: &Arc<AppContext>) {
         .await;
     mcp.register_resource(Arc::new(DioxusFullstackPatternsResource))
         .await;
+    mcp.register_resource(Arc::new(MyNoSqlEntityPatternsResource))
+        .await;
     mcp.register_resource(Arc::new(CiUtilsResource)).await;
     mcp.register_resource(Arc::new(MyPostgresResource)).await;
 
