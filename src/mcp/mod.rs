@@ -22,7 +22,6 @@ pub use dioxus_fullstack_patterns_resource::*;
 mod my_no_sql_entity_patterns_resource;
 pub use my_no_sql_entity_patterns_resource::*;
 mod my_grpc_extensions_resource;
-#[allow(unused_imports)]
 pub use my_grpc_extensions_resource::*;
 mod ci_utils_resource;
 pub use ci_utils_resource::*;
