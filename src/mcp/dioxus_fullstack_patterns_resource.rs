@@ -13,11 +13,7 @@ impl ResourceDefinition for DioxusFullstackPatternsResource {
 
 #[async_trait::async_trait]
 impl McpResourceService for DioxusFullstackPatternsResource {
-    async fn read_resource(&self, uri: &str) -> Result<ResourceReadResult, String> {
-        if uri != Self::RESOURCE_URI {
-            return Err(format!("Unknown resource URI: {}", uri));
-        }
-
+    async fn read_resource(&self) -> Result<ResourceReadResult, String> {
         const README_URL: &str = "https://raw.githubusercontent.com/MyJetTools/development-mcp/main/docs/DIOXUS_FULLSTACK_DESIGN_PATTERS.md";
 
         load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, README_URL).await

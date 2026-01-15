@@ -12,11 +12,7 @@ impl ResourceDefinition for HttpActionsResource {
 
 #[async_trait::async_trait]
 impl McpResourceService for HttpActionsResource {
-    async fn read_resource(&self, uri: &str) -> Result<ResourceReadResult, String> {
-        if uri != Self::RESOURCE_URI {
-            return Err(format!("Unknown resource URI: {}", uri));
-        }
-
+    async fn read_resource(&self) -> Result<ResourceReadResult, String> {
         const HTTP_ACTIONS_URL: &str =
             "https://raw.githubusercontent.com/MyJetTools/my-http-server/refs/heads/main/HTTP_ACTIONS_DESIGN.md";
 

@@ -12,11 +12,7 @@ impl ResourceDefinition for CargoDependenciesResource {
 
 #[async_trait::async_trait]
 impl McpResourceService for CargoDependenciesResource {
-    async fn read_resource(&self, uri: &str) -> Result<ResourceReadResult, String> {
-        if uri != Self::RESOURCE_URI {
-            return Err(format!("Unknown resource URI: {}", uri));
-        }
-
+    async fn read_resource(&self) -> Result<ResourceReadResult, String> {
         const GUIDE_URL: &str = "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/cargo-dependencies-guide.md";
 
         load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, GUIDE_URL).await

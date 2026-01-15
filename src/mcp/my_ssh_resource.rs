@@ -13,11 +13,7 @@ impl ResourceDefinition for MySshResource {
 
 #[async_trait::async_trait]
 impl McpResourceService for MySshResource {
-    async fn read_resource(&self, uri: &str) -> Result<ResourceReadResult, String> {
-        if uri != Self::RESOURCE_URI {
-            return Err(format!("Unknown resource URI: {}", uri));
-        }
-
+    async fn read_resource(&self) -> Result<ResourceReadResult, String> {
         const README_URL: &str =
             "https://raw.githubusercontent.com/MyJetTools/my-ssh/main/README.md";
 

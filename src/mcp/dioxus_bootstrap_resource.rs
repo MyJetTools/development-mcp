@@ -13,11 +13,7 @@ impl ResourceDefinition for DioxusBootstrapResource {
 
 #[async_trait::async_trait]
 impl McpResourceService for DioxusBootstrapResource {
-    async fn read_resource(&self, uri: &str) -> Result<ResourceReadResult, String> {
-        if uri != Self::RESOURCE_URI {
-            return Err(format!("Unknown resource URI: {}", uri));
-        }
-
+    async fn read_resource(&self) -> Result<ResourceReadResult, String> {
         const DIOXUS_BOOTSTRAP_URL: &str =
             "https://raw.githubusercontent.com/amigin/ai-templates/refs/heads/main/cursor/bootstrap-empty-dioxus-fullstack-project.mdc";
 
