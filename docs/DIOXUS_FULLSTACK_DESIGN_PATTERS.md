@@ -203,6 +203,10 @@ Applies to Dioxus **fullstack** projects (shared code server/web). Use these whe
   };
   ```
 
+### 9.1) Client-side "now" date/time
+- **Rule**: If “now” date/time must be resolved on the **client side** in a Dioxus fullstack app, use `dioxus_utils::now_date_time()`.
+- This avoids server-side resolution and keeps client-local time semantics correct.
+
 ### 10) Status messaging
 - Store transient statuses (availability checks, errors) in the form state and render inline near the related control.
 - Clear stale statuses when the input they depend on changes.
