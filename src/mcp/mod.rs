@@ -1,5 +1,7 @@
 mod mcp_resource;
 pub use mcp_resource::*;
+mod resource_tools;
+pub use resource_tools::*;
 mod flurl_resource;
 pub mod scripts;
 pub use flurl_resource::*;

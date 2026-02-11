@@ -38,6 +38,39 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(CiUtilsResource)).await;
     mcp.register_resource(Arc::new(MyPostgresResource)).await;
 
+    mcp.register_tool_call(Arc::new(McpDevelopmentGuideTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(FlUrlUsageGuideTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(HttpActionsDesignGuideTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(AppBootstrapGuideTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(DioxusBootstrapGuideTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(CargoDependenciesGuideTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(MySshReadmeTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(MyTcpSocketsReadmeTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(RustExtensionsReadmeTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(DioxusFullstackPatternsTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(MyNoSqlEntityPatternsTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(MyGrpcExtensionsReadmeTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(DioxusUtilsReadmeTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(CiUtilsReadmeTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(MyPostgresReadmeTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(ListResourceToolsTool::new(app.clone())))
+        .await;
+
     http_server.add_middleware(Arc::new(mcp));
 
     http_server.start(app.app_states.clone(), my_logger::LOGGER.clone());
