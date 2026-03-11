@@ -223,6 +223,14 @@ fn all_resource_tools() -> Vec<ResourceToolInfo> {
             resource_description: "Documentation for my-postgres library".to_string(),
             mime_type: "text/markdown".to_string(),
         },
+        ResourceToolInfo {
+            func_name: "get_dioxus_admin_ui_kit".to_string(),
+            tool_description: "Fetch Dioxus Admin UI Kit README resource content".to_string(),
+            resource_uri: "resource://dioxus-admin-ui-kit".to_string(),
+            resource_name: "Dioxus Admin UI Kit".to_string(),
+            resource_description: "UI components for Dioxus admin apps: typed inputs, table rendering, enum selectors".to_string(),
+            mime_type: "text/markdown".to_string(),
+        },
     ]
 }
 
@@ -416,4 +424,15 @@ define_resource_tool!(
     "resource://my-postgres-readme",
     "text/markdown",
     "https://raw.githubusercontent.com/MyJetTools/my-postgres/refs/heads/main/README.md"
+);
+
+define_resource_tool!(
+    DioxusAdminUiKitTool,
+    "get_dioxus_admin_ui_kit",
+    "Fetch Dioxus Admin UI Kit README resource content",
+    "Dioxus Admin UI Kit",
+    "UI components for Dioxus admin apps: typed inputs, table rendering, enum selectors",
+    "resource://dioxus-admin-ui-kit",
+    "text/markdown",
+    "https://raw.githubusercontent.com/MyJetTools/dioxus-admin-ui-kit/main/README.md"
 );

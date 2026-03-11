@@ -31,3 +31,5 @@ mod ci_utils_resource;
 pub use ci_utils_resource::*;
 mod my_postgres_resource;
 pub use my_postgres_resource::*;
+mod dioxus_admin_ui_kit_resource;
+pub use dioxus_admin_ui_kit_resource::*;
