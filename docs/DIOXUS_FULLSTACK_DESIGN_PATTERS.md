@@ -10,17 +10,47 @@ Applies to Dioxus **fullstack** projects (shared code server/web). Use these whe
 ### 0) Shared models (client + server)
 - **Rule**: If a struct is used both on server **and** client (e.g., returned from a server function and rendered in UI) → put it in `src/models`.
 - **Rule**: If a struct is only used inside a server function (e.g., parsing an external API response) → keep it private in the `src/api/*.rs` file, gated with `#[cfg(feature = "server")]`.
+- **Naming**: Models returned from server functions (HTTP/server fn boundary) use the `HttpModel` suffix: `BalanceHistoryHttpModel`, `InstrumentHttpModel`.
+- **One file per type**: each model lives in its own file (`models/balance_history.rs`, `models/instrument.rs`).
+- `mod.rs` uses the standard re-export pattern: `mod x; pub use x::*;`
+- In components: `use crate::models::*;` — never enumerate types explicitly.
 - Derive `Serialize`/`Deserialize` for anything crossing the wire; keep structs minimal and web-safe.
-- If a model is used in `http_route` responses (server-only), also derive `MyHttpObjectStructure` when required by your HTTP doc tooling; otherwise `Serialize`/`Deserialize` is enough.
 - **Examples**:
-  - `BinanceInstrumentCheckResponse` → in `src/models` (returned to client, shown in dialog)
-  - `BinanceExchangeInfo`, `BinanceSymbolInfo` → private in `src/api/binance.rs` with `#[cfg(feature = "server")]` (only used to parse Binance API response)
-  - `InputValue<T>` → in `src/models` (shared validation helper used in components)
+  - `BalanceHistoryHttpModel` → in `src/models/balance_history.rs` (returned to client, shown in UI)
+  - `BinanceExchangeInfo` → private in `src/api/binance.rs` with `#[cfg(feature = "server")]` (only used to parse external API response)
+
+### 0.1) Mappers (server-only)
+- Mappers know about gRPC/server contracts — they live in `src/server/` (not visible to client code).
+- **1:1 mapping** → `impl From<GrpcModel> for HttpModel`, then in api: `.map(|i| i.into()).collect()`
+- **Complex mapping** (multiple structs, logic) → a mapper function in `src/server/mappers/`
+
+```rust
+// ✅ 1:1 — impl From in server/mappers/ or alongside the model
+impl From<BalanceHistoryGrpcModel> for BalanceHistoryHttpModel {
+    fn from(i: BalanceHistoryGrpcModel) -> Self {
+        Self { id: i.id, delta: i.delta, balance_after: i.balance_after, comment: i.comment, moment: i.moment }
+    }
+}
+
+// api/balance.rs — clean, no manual field mapping
+Ok(items.into_iter().map(|i| i.into()).collect())
+```
+
+### 0.2) API calls — always full path, never `use`
+```rust
+// ✅ CORRECT — visible that this is a server function call
+crate::api::accounts::get_account(id).await
+crate::api::balance::balance_update(id, delta, comment).await
+
+// ❌ WRONG — looks like a local function, hides the boundary
+use crate::api::accounts::get_account;
+get_account(id).await
+```
 
 ### 1) Dialogs: lifecycle and rendering
 - Keep a global `DialogState` in context (`Signal<DialogState>`). Define variants per dialog (`Confirmation`, `EditInstrument`, etc.).
 - Render all dialogs centrally via `RenderDialog`, matching on `DialogState` and embedding the concrete dialog component.
-- Use `DialogTemplate` for consistent header, close “X”, cancel button, and optional OK slot.
+- Use `DialogTemplate` for consistent header, close "X", cancel button, and optional OK slot.
 - Close dialogs by setting state to `DialogState::None` (either via `close()` or `set(DialogState::None)`).
 - **Example: `DialogState` and renderer**
   ```rust
@@ -131,25 +161,83 @@ Applies to Dioxus **fullstack** projects (shared code server/web). Use these whe
   };
   ```
 
-### 6) Data loading lists
-- Use the `DataState`/`RenderState` pattern: start `None`, set `Loading`, fire `spawn` to fetch, then `set_value` or `set_error`.
-- After a mutation (save/delete), call `data.reset()` to force a reload through the existing load logic.
-- Filter/search by keeping the search string in state and applying it before rendering rows.
-- **Example: load on first render**
-  ```rust
-  if matches!(state.data.as_ref(), RenderState::None) {
-      spawn(async move {
-          state.write().data.set_loading();
-          match crate::api::instruments::get_instruments().await {
-              Ok(items) => state.write().data.set_value(items.into_iter().map(Rc::new).collect()),
-              Err(err) => state.write().data.set_error(err),
-          }
-      });
-      return loading();
-  }
-  ```
+### 6) Data loading — DataState + `get_data` pattern
 
-### 7) Server functions as API boundary (fullstack)
+**Every** piece of async data uses `DataState<T>` and a `get_data` helper function. Never call API directly in a component body or trigger loading via manual `loading: bool` fields.
+
+The helper handles all four states and triggers loading automatically on first render (`None` branch spawns the fetch):
+
+```rust
+#[derive(Default)]
+struct MyListState {
+    data: DataState<Vec<MyHttpModel>>,
+}
+
+#[component]
+fn MyList(some_id: i64) -> Element {
+    let cs = use_signal(MyListState::default);
+    let cs_ra = cs.read();
+
+    let items = match get_my_data(cs, &cs_ra, some_id) {
+        Ok(d) => d,
+        Err(el) => return el,
+    };
+    rsx! { /* render items */ }
+}
+
+fn get_my_data<'a>(
+    mut cs: Signal<MyListState>,
+    cs_ra: &'a MyListState,
+    some_id: i64,
+) -> Result<&'a [MyHttpModel], Element> {
+    match cs_ra.data.as_ref() {
+        RenderState::None => {
+            spawn(async move {
+                cs.write().data.set_loading();
+                match crate::api::something::get_items(some_id).await {
+                    Ok(data) => cs.write().data.set_loaded(data),
+                    Err(e)   => cs.write().data.set_error(e.to_string()),
+                }
+            });
+            Err(render_loading())
+        }
+        RenderState::Loading      => Err(render_loading()),
+        RenderState::Loaded(data) => Ok(data.as_slice()),
+        RenderState::Error(err)   => Err(render_error(err.as_str())),
+    }
+}
+```
+
+**Forced reload after mutation**: call `.reset()` on `DataState` — it returns to `None`, and the next render triggers a fresh load automatically.
+
+```rust
+// After save/delete — just reset, get_data will reload on next render
+cs.write().data.reset();
+```
+
+If the reset is triggered from **outside** the component (e.g., parent after a mutation), the `DataState` must be accessible from the caller: either lift it into the parent's state or pass `Signal<ChildState>` as a prop.
+
+### 7) Component structure for pages with tabs and lists
+
+- Each **tab** is its own `#[component]` receiving an ID prop and owning its `DataState`.
+- Each **list within a tab** (e.g., active positions + pending orders) is also a separate component with its own `DataState`.
+- **Page-level state** holds only UI: current tab, search input, selected item, flags — **never data arrays**.
+
+```
+PageComponent              ← PageState: input, selected item, tab, ui flags only
+└── ContentComponent
+    ├── TabA { id }        ← own State + DataState, get_data pattern
+    │   ├── ListOne { id } ← own State + DataState
+    │   └── ListTwo { id } ← own State + DataState
+    ├── TabB { id }        ← own State + DataState
+    └── TabC { id, cs }    ← uses parent Signal if parent needs to trigger reset
+```
+
+When a child tab needs to be reloaded from the parent (e.g., balance history after deposit), either:
+- Lift the `DataState` into the parent's state and pass `Signal<PageState>` to the tab, or
+- Pass `Signal<ChildState>` as a prop so the parent can call `.reset()` directly.
+
+### 8) Server functions as API boundary (fullstack)
 - Use Dioxus fullstack server functions (`#[get]`, `#[post]` in `src/api/*`) for all client <-> server calls; they compile to RPCs on web and direct calls on server.
 - Keep them thin: fetch app context, perform storage/NoSQL ops, return typed models (`InstrumentHttpModel`, etc.).
 - Prefer `Result<T, ServerFnError>`; let the client handle loading/error rendering via `DataState`.
@@ -165,10 +253,10 @@ Applies to Dioxus **fullstack** projects (shared code server/web). Use these whe
   }
   ```
 
-### 8) Dialog template usage
+### 9) Dialog template usage
 - Provide `header`, optional `header_content`, main `content`, optional `ok_button`, and `allocate_max_space` when needed.
 - Cancel/close is built in; for custom OK, pass a button element to `ok_button`.
-- The close “X” uses the dialog context; no per-dialog wiring required.
+- The close "X" uses the dialog context; no per-dialog wiring required.
 - **Example: template with OK**
   ```rust
   DialogTemplate {
@@ -187,7 +275,7 @@ Applies to Dioxus **fullstack** projects (shared code server/web). Use these whe
   }
   ```
 
-### 9) Signal handling tips
+### 10) Signal handling tips
 - Signals are `Copy`; capture once in handlers. Only clone when moving into async blocks.
 - Avoid nested `cs.clone()` layers unless a separate handle is truly needed.
 - Read with `.read()` for an immutable snapshot; write with `.write()` to mutate.
@@ -203,11 +291,11 @@ Applies to Dioxus **fullstack** projects (shared code server/web). Use these whe
   };
   ```
 
-### 9.1) Client-side "now" date/time
-- **Rule**: If “now” date/time must be resolved on the **client side** in a Dioxus fullstack app, use `dioxus_utils::now_date_time()`.
+### 10.1) Client-side "now" date/time
+- **Rule**: If "now" date/time must be resolved on the **client side** in a Dioxus fullstack app, use `dioxus_utils::now_date_time()`.
 - This avoids server-side resolution and keeps client-local time semantics correct.
 
-### 10) Status messaging
+### 11) Status messaging
 - Store transient statuses (availability checks, errors) in the form state and render inline near the related control.
 - Clear stale statuses when the input they depend on changes.
 - **Example**
