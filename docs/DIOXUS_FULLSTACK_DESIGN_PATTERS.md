@@ -307,3 +307,25 @@ When a child tab needs to be reloaded from the parent (e.g., balance history aft
       }
   }
   ```
+
+### 12) `use` imports in server functions — always inside the function body
+
+In server functions (`#[get]`, `#[post]`), put **all `use` imports inside the function body**, not at the file level. Top-level imports cause `unused import` warnings on the web target where `feature = "server"` is disabled.
+
+```rust
+// ✅ CORRECT — imports inside function, no warnings on web target
+#[get("/api/swap-profiles/get")]
+pub async fn get_swap_profiles() -> Result<Vec<SwapProfileModel>, ServerFnError> {
+    use std::collections::HashMap;
+    use crate::margin_engine_grpc::SwapProfileGrpcModel;
+    use crate::server::APP_CTX;
+    // ...
+}
+
+// ❌ WRONG — top-level imports cause unused warnings on web target
+use std::collections::HashMap;
+use crate::margin_engine_grpc::SwapProfileGrpcModel;
+
+#[get("/api/swap-profiles/get")]
+pub async fn get_swap_profiles() -> Result<Vec<SwapProfileModel>, ServerFnError> { ... }
+```
