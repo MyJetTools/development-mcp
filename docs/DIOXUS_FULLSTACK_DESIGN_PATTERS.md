@@ -329,3 +329,97 @@ use crate::margin_engine_grpc::SwapProfileGrpcModel;
 #[get("/api/swap-profiles/get")]
 pub async fn get_swap_profiles() -> Result<Vec<SwapProfileModel>, ServerFnError> { ... }
 ```
+
+### 13) `NotifyChildComponent<TValue>` — parent-to-child notification
+
+Use when a parent action (e.g. deposit, save) must trigger a child component to reload its own `DataState`, and the child manages its state independently (not in the parent's state).
+
+`NotifyChildComponent<TValue>` is in `dioxus_utils`. It wraps a `Signal<Option<TValue>>` and is `Copy + Clone`, so it can be passed as a component prop.
+
+**Parent** — create once with `new()`, pass to child as prop, call `notify_other_components(value)` after mutation:
+
+```rust
+// In parent component body (hook context):
+let notify_balance = NotifyChildComponent::<()>::new();
+
+// Pass to child:
+ChildComponent { notify_balance }
+
+// After mutation (e.g. deposit success):
+notify_balance.notify_other_components(());
+```
+
+**Child** — call `on_notify(callback)` as a hook. Internally sets up `use_effect` that fires when the signal changes, consumes the value, and runs the callback:
+
+```rust
+#[component]
+fn ChildComponent(notify_balance: NotifyChildComponent<()>) -> Element {
+    let mut cs = use_signal(ChildState::default);
+
+    notify_balance.on_notify(move |_| {
+        cs.write().data.reset(); // triggers get_data reload on next render
+    });
+
+    let cs_ra = cs.read();
+    let items = match get_data(cs, &cs_ra) { ... };
+    rsx! { /* render */ }
+}
+```
+
+**Key properties:**
+- `NotifyChildComponent` holds `Signal<Option<TValue>>` — `Copy`, safe to pass as prop
+- `on_notify` must be called at component top level (it wraps `use_effect`)
+- The notification is consumed once — child's `use_effect` fires, clears the value, runs callback
+- After `.reset()` on `DataState`, the `get_data` helper sees `None` and spawns a reload automatically
+
+### 14) `dialog_template` / `dialog_template_ex` — standard dialog wrapper
+
+All dialogs use `dialog_template` (or `dialog_template_ex` for custom size) instead of inlining modal HTML. This keeps dialog structure consistent and eliminates boilerplate.
+
+```rust
+// Standard size
+super::dialog_template(title, content, ok_button)
+
+// Custom size (e.g. modal-xl for wide dialogs)
+super::dialog_template_ex(title, content, ok_button, Some("modal-xl"))
+```
+
+**Pattern** — compute title, build `content` and `ok_button` as `rsx!` blocks, then delegate:
+
+```rust
+#[component]
+pub fn EditInstrumentDialog(instrument: Rc<InstrumentModel>, on_ok: EventHandler<InstrumentModel>) -> Element {
+    let mut cs = use_signal(|| EditState::from(instrument.as_ref()));
+    let cs_ra = cs.read();
+
+    let title = if cs_ra.is_new { "New Instrument" } else { "Edit Instrument" };
+
+    let content = rsx! { /* form inputs */ };
+
+    let ok_button = rsx! {
+        button {
+            class: "btn btn-success",
+            disabled: !cs_ra.is_valid(),
+            onclick: move |_| {
+                let model = cs.read().to_model();
+                consume_context::<Signal<super::DialogState>>().set(super::DialogState::None);
+                on_ok.call(model);
+            },
+            "Save"
+        }
+    };
+
+    super::dialog_template(title, content, ok_button)
+}
+```
+
+**When loading data** — pass the loading/error element as `content` with empty `ok_button`:
+
+```rust
+let data = match get_data(cs, &cs_ra) {
+    Ok(d) => d,
+    Err(el) => return super::dialog_template(title, el, rsx! {}),
+};
+```
+
+Cancel button and close (×) are built into `dialog_template` — no need to add them.
