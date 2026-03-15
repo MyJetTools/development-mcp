@@ -1,1 +1,1 @@
-// Controllers will be added here for MCP server
+pub mod ai_docs;

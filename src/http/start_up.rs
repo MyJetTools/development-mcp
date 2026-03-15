@@ -74,6 +74,9 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(ListResourceToolsTool::new(app.clone())))
         .await;
 
+    let controllers = Arc::new(super::builder::build_controllers(app));
+    http_server.add_middleware(controllers);
+
     http_server.add_middleware(Arc::new(mcp));
 
     http_server.start(app.app_states.clone(), my_logger::LOGGER.clone());
