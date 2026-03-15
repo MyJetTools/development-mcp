@@ -59,13 +59,13 @@ const DOCS: &[DocEntry] = &[
         filename: "dioxus-utils-readme.md",
         name: "dioxus-utils Usage Cases Guide",
         description: "Utilities for Dioxus apps: data state, dialogs, JS helpers",
-        when_to_use: "Read when you need shared data state management, dialog scaffolding, or JS interop helpers inside a Dioxus application.",
+        when_to_use: "Read when you need the concrete helper crate behind Dioxus patterns — use-state wrappers, dialog open/close hooks, and JS interop calls. Complements dioxus-fullstack-design-patterns, which covers the patterns; this covers the library API that implements them.",
     },
     DocEntry {
         filename: "dioxus-admin-ui-kit.md",
         name: "Dioxus Admin UI Kit",
-        description: "UI components for Dioxus admin apps",
-        when_to_use: "Read when building admin-style UIs — provides typed text inputs, table rendering helpers, and enum selector components for Dioxus.",
+        description: "Ready-made UI components for Dioxus admin panels",
+        when_to_use: "Read when building an internal admin or back-office UI — provides pre-built typed text inputs, sortable table components, and enum dropdown selectors. Use instead of hand-rolling form controls described in dioxus-fullstack-design-patterns.",
     },
     DocEntry {
         filename: "my-postgres-readme.md",
