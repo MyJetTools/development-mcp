@@ -9,88 +9,105 @@ struct DocEntry {
     filename: &'static str,
     name: &'static str,
     description: &'static str,
+    when_to_use: &'static str,
 }
 
 const DOCS: &[DocEntry] = &[
     DocEntry {
-        filename: "mcp-development-guide.md",
-        name: "MCP Development Guide",
-        description: "Guide for creating Prompts and Tool Calls",
-    },
-    DocEntry {
-        filename: "flurl-usage-guide.md",
-        name: "FlUrl Usage Guide",
-        description: "How to use FlUrl library",
-    },
-    DocEntry {
-        filename: "http-actions-design-guide.md",
-        name: "HTTP Actions Design Guide",
-        description: "Guide for HTTP action architecture and patterns",
-    },
-    DocEntry {
         filename: "app-bootstrap.md",
         name: "App Bootstrap Guide",
         description: "Step-by-step instructions for bootstrapping a new project",
-    },
-    DocEntry {
-        filename: "dioxus-bootstrap.md",
-        name: "Dioxus Fullstack Bootstrap Guide",
-        description: "Step-by-step instructions for bootstrapping a new empty Dioxus fullstack web application",
+        when_to_use: "Read this first when starting a brand-new Rust microservice. Covers project layout, AppContext, settings reader, and startup wiring.",
     },
     DocEntry {
         filename: "cargo-dependencies-guide.md",
         name: "Cargo Dependencies Guide",
         description: "How to add dependencies to Cargo.toml",
+        when_to_use: "Consult whenever you need to add or update a crate from the MyJetTools ecosystem — correct git tags, feature flags, and workspace patterns.",
     },
     DocEntry {
-        filename: "my-ssh-readme.md",
-        name: "Ssh connections design library",
-        description: "Async SSH helpers for commands, file transfer, and port forwarding",
+        filename: "mcp-development-guide.md",
+        name: "MCP Development Guide",
+        description: "Guide for creating MCP resources and Tool Calls",
+        when_to_use: "Read when building or extending this MCP server itself — how to define resources, tool calls, and register them.",
     },
     DocEntry {
-        filename: "my-tcp-sockets-readme.md",
-        name: "TcpSockets design library",
-        description: "Async TCP server/client building blocks with ping/pong and TLS options",
+        filename: "http-actions-design-guide.md",
+        name: "HTTP Actions Design Guide",
+        description: "HTTP action architecture and patterns for my-http-server",
+        when_to_use: "Read when adding HTTP controllers: the #[http_route] macro, input models (MyHttpInput), output models (MyHttpObjectStructure), error types, and controller registration.",
     },
     DocEntry {
-        filename: "rust-extensions.md",
-        name: "rust-extensions",
-        description: "Low-level utils, queues and other helpers to glue together Rust code",
+        filename: "flurl-usage-guide.md",
+        name: "FlUrl Usage Guide",
+        description: "How to use the FlUrl HTTP client library",
+        when_to_use: "Read when making outbound HTTP/HTTPS requests — FlUrl is the standard async HTTP client used across MyJetTools projects.",
+    },
+    DocEntry {
+        filename: "dioxus-bootstrap.md",
+        name: "Dioxus Fullstack Bootstrap Guide",
+        description: "Bootstrap a new empty Dioxus fullstack web application",
+        when_to_use: "Read at the start of a new Dioxus fullstack project. Covers workspace setup, feature flags, entry points, and initial routing.",
     },
     DocEntry {
         filename: "dioxus-fullstack-design-patterns.md",
         name: "Dioxus Fullstack Design Patterns",
-        description: "Project playbook for dialogs, forms, lists, and server functions",
-    },
-    DocEntry {
-        filename: "my-no-sql-entity-design-patterns.md",
-        name: "MyNoSql Entity Design Patterns",
-        description: "Design patterns for MyNoSql entities and enums",
-    },
-    DocEntry {
-        filename: "my-grpc-extensions.md",
-        name: "Grpc extensions",
-        description: "Utilities and macros for building gRPC clients and servers",
+        description: "Playbook for dialogs, forms, lists, and server functions",
+        when_to_use: "Read when implementing UI features in an existing Dioxus app — standard patterns for server functions, dialogs, reactive lists, and form handling.",
     },
     DocEntry {
         filename: "dioxus-utils-readme.md",
         name: "dioxus-utils Usage Cases Guide",
         description: "Utilities for Dioxus apps: data state, dialogs, JS helpers",
+        when_to_use: "Read when you need shared data state management, dialog scaffolding, or JS interop helpers inside a Dioxus application.",
     },
     DocEntry {
-        filename: "ci-utils-readme.md",
-        name: "ci-utils",
-        description: "Utility crate for build-time helpers",
+        filename: "dioxus-admin-ui-kit.md",
+        name: "Dioxus Admin UI Kit",
+        description: "UI components for Dioxus admin apps",
+        when_to_use: "Read when building admin-style UIs — provides typed text inputs, table rendering helpers, and enum selector components for Dioxus.",
     },
     DocEntry {
         filename: "my-postgres-readme.md",
         name: "Postgres Design Library",
         description: "Documentation for my-postgres library",
+        when_to_use: "Read when integrating PostgreSQL — covers connection pooling, query macros, bulk operations, and the entity model conventions used in MyJetTools projects.",
     },
     DocEntry {
-        filename: "dioxus-admin-ui-kit.md",
-        name: "Dioxus Admin UI Kit",
-        description: "UI components for Dioxus admin apps: typed inputs, table rendering, enum selectors",
+        filename: "my-no-sql-entity-design-patterns.md",
+        name: "MyNoSql Entity Design Patterns",
+        description: "Design patterns for MyNoSql entities and enums",
+        when_to_use: "Read when designing or modifying MyNoSql table entities — partition key / row key conventions, enum serialization, and versioning patterns.",
+    },
+    DocEntry {
+        filename: "my-grpc-extensions.md",
+        name: "gRPC extensions",
+        description: "Utilities and macros for building gRPC clients and servers",
+        when_to_use: "Read when adding a gRPC client or server — covers the my-grpc-extensions macros, retry policies, and channel management.",
+    },
+    DocEntry {
+        filename: "my-ssh-readme.md",
+        name: "SSH connections design library",
+        description: "Async SSH helpers for commands, file transfer, and port forwarding",
+        when_to_use: "Read when the service needs to run remote shell commands, transfer files via SCP, or open SSH tunnels programmatically.",
+    },
+    DocEntry {
+        filename: "my-tcp-sockets-readme.md",
+        name: "TcpSockets design library",
+        description: "Async TCP server/client building blocks with ping/pong and TLS options",
+        when_to_use: "Read when implementing a raw TCP server or client — covers connection lifecycle, ping/pong keep-alive, and optional TLS wrapping.",
+    },
+    DocEntry {
+        filename: "rust-extensions.md",
+        name: "rust-extensions",
+        description: "Low-level utils, queues and other helpers",
+        when_to_use: "Read when you need background queues, lazy-init containers, date/time helpers, or other low-level primitives from the MyJetTools base layer.",
+    },
+    DocEntry {
+        filename: "ci-utils-readme.md",
+        name: "ci-utils",
+        description: "Build-time helper crate",
+        when_to_use: "Read when setting up build scripts (build.rs) — provides version stamping, git-hash embedding, and protobuf compilation helpers used in CI pipelines.",
     },
 ];
 
@@ -100,12 +117,13 @@ fn build_html() -> String {
         rows.push_str(&format!(
             r#"<tr>
           <td><a href="/ai-docs/{filename}">{filename}</a></td>
-          <td>{name}</td>
-          <td>{description}</td>
+          <td><strong>{name}</strong><br><span class="desc">{description}</span></td>
+          <td>{when_to_use}</td>
         </tr>"#,
             filename = doc.filename,
             name = doc.name,
             description = doc.description,
+            when_to_use = doc.when_to_use,
         ));
     }
 
@@ -119,14 +137,14 @@ fn build_html() -> String {
   <style>
     body {{
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      max-width: 960px;
+      max-width: 1100px;
       margin: 40px auto;
       padding: 0 20px;
       background: #f8f9fa;
       color: #212529;
     }}
-    h1 {{ margin-bottom: 8px; }}
-    p.subtitle {{ color: #6c757d; margin-top: 0; margin-bottom: 28px; }}
+    h1 {{ margin-bottom: 6px; }}
+    p.subtitle {{ color: #6c757d; margin-top: 0; margin-bottom: 28px; font-size: .97em; }}
     table {{
       width: 100%;
       border-collapse: collapse;
@@ -141,29 +159,48 @@ fn build_html() -> String {
       text-align: left;
       padding: 12px 16px;
       font-weight: 600;
+      font-size: .88em;
+      text-transform: uppercase;
+      letter-spacing: .04em;
     }}
     td {{
-      padding: 11px 16px;
+      padding: 12px 16px;
       border-bottom: 1px solid #e9ecef;
       vertical-align: top;
+      font-size: .93em;
     }}
     tr:last-child td {{ border-bottom: none; }}
     tr:hover td {{ background: #f1f3f5; }}
-    a {{ color: #0d6efd; text-decoration: none; font-family: monospace; font-size: .9em; }}
+    a {{
+      color: #0d6efd;
+      text-decoration: none;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: .85em;
+      white-space: nowrap;
+    }}
     a:hover {{ text-decoration: underline; }}
-    td:nth-child(2) {{ font-weight: 500; white-space: nowrap; }}
-    td:nth-child(3) {{ color: #495057; }}
+    .desc {{ color: #868e96; font-size: .88em; margin-top: 2px; display: block; }}
+    td:last-child {{ color: #495057; line-height: 1.55; }}
+    col.col-url  {{ width: 26%; }}
+    col.col-name {{ width: 26%; }}
+    col.col-when {{ width: 48%; }}
   </style>
 </head>
 <body>
   <h1>AI Docs</h1>
-  <p class="subtitle">Development best-practice documents served by this MCP server</p>
+  <p class="subtitle">Development best-practice documents served by this MCP server.<br>
+  Use the <em>When to use</em> column to pick the right document before fetching it.</p>
   <table>
+    <colgroup>
+      <col class="col-url">
+      <col class="col-name">
+      <col class="col-when">
+    </colgroup>
     <thead>
       <tr>
         <th>URL</th>
-        <th>Name</th>
-        <th>Description</th>
+        <th>Document</th>
+        <th>When to use</th>
       </tr>
     </thead>
     <tbody>
@@ -181,7 +218,7 @@ fn build_html() -> String {
     route: "/ai-docs",
     controller: "AiDocs",
     summary: "List all AI documentation",
-    description: "Returns an HTML page listing all available markdown documents",
+    description: "Returns an HTML page listing all available markdown documents with usage guidance",
     result: [
         {status_code: 200, description: "HTML index page"},
     ]
