@@ -15,7 +15,7 @@ const DOCS: &[DocEntry] = &[
     DocEntry {
         filename: "app-bootstrap.md",
         name: "App Bootstrap Guide",
-        description: "Step-by-step instructions for bootstrapping a new project",
+        description: "Step-by-step instructions for bootstrapping a new project using service-sdk: settings, AppContext, gRPC, HTTP, Service Bus, MyNoSql reader/writer",
     },
     DocEntry {
         filename: "cargo-dependencies-guide.md",
@@ -98,8 +98,8 @@ pub(super) fn build_yaml(scheme: &str, host: &str) -> String {
     let mut yaml = String::from("resources:\n");
     for doc in DOCS {
         yaml.push_str(&format!(
-            "  - url: \"{}://{}/ai-docs/{}\"\n    description: \"{}\"\n",
-            scheme, host, doc.filename, doc.description
+            "  - url: \"{}://{}/ai-docs/{}\"\n    name: \"{}\"\n    description: \"{}\"\n",
+            scheme, host, doc.filename, doc.name, doc.description
         ));
     }
     yaml
