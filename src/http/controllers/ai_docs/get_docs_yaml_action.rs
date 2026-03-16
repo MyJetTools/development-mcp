@@ -29,9 +29,11 @@ impl GetAiDocsYamlAction {
 
 async fn handle_request(
     _action: &GetAiDocsYamlAction,
-    _ctx: &HttpContext,
+    ctx: &HttpContext,
 ) -> Result<HttpOkResult, HttpFailResult> {
-    HttpOutput::as_text(build_yaml())
+    let scheme = ctx.request.get_scheme();
+    let host = ctx.request.get_host();
+    HttpOutput::as_text(build_yaml(scheme, host))
         .set_content_type(my_http_server::WebContentType::Yaml)
         .add_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         .into_ok_result(true)
