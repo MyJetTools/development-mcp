@@ -9,7 +9,7 @@ use super::get_docs_index_action::build_yaml;
 
 #[http_route(
     method: "GET",
-    route: "/ai-docs/ai-docs.yaml",
+    route: "/ai-docs.yaml",
     controller: "AiDocs",
     summary: "AI docs YAML index",
     description: "Returns a YAML file listing all available tools with usage guidance",
