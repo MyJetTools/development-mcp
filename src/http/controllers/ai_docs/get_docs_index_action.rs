@@ -7,6 +7,7 @@ use crate::app::AppContext;
 
 struct DocEntry {
     filename: &'static str,
+    tool: &'static str,
     name: &'static str,
     description: &'static str,
     when_to_use: &'static str,
@@ -15,101 +16,128 @@ struct DocEntry {
 const DOCS: &[DocEntry] = &[
     DocEntry {
         filename: "app-bootstrap.md",
+        tool: "get_app_bootstrap_guide",
         name: "App Bootstrap Guide",
         description: "Step-by-step instructions for bootstrapping a new project",
-        when_to_use: "Read this first when starting a brand-new Rust microservice. Covers project layout, AppContext, settings reader, and startup wiring.",
+        when_to_use: "Создание нового Rust микросервиса — layout проекта, AppContext, settings reader, startup wiring.",
     },
     DocEntry {
         filename: "cargo-dependencies-guide.md",
+        tool: "get_cargo_dependencies_guide",
         name: "Cargo Dependencies Guide",
         description: "How to add dependencies to Cargo.toml",
-        when_to_use: "Consult whenever you need to add or update a crate from the MyJetTools ecosystem — correct git tags, feature flags, and workspace patterns.",
+        when_to_use: "Добавление или обновление зависимостей из экосистемы MyJetTools — git tags, feature flags, workspace patterns.",
     },
     DocEntry {
         filename: "mcp-development-guide.md",
+        tool: "get_mcp_development_guide",
         name: "MCP Development Guide",
         description: "Guide for creating MCP resources and Tool Calls",
-        when_to_use: "Read when building or extending this MCP server itself — how to define resources, tool calls, and register them.",
+        when_to_use: "Разработка или расширение MCP сервера — ресурсы, tool calls, регистрация.",
     },
     DocEntry {
         filename: "http-actions-design-guide.md",
+        tool: "get_http_actions_design_guide",
         name: "HTTP Actions Design Guide",
         description: "HTTP action architecture and patterns for my-http-server",
-        when_to_use: "Read when adding HTTP controllers: the #[http_route] macro, input models (MyHttpInput), output models (MyHttpObjectStructure), error types, and controller registration.",
+        when_to_use: "Добавление HTTP контроллеров — макрос #[http_route], input/output модели, типы ошибок, регистрация.",
     },
     DocEntry {
         filename: "flurl-usage-guide.md",
+        tool: "get_flurl_usage_guide",
         name: "FlUrl Usage Guide",
         description: "How to use the FlUrl HTTP client library",
-        when_to_use: "Read when making outbound HTTP/HTTPS requests — FlUrl is the standard async HTTP client used across MyJetTools projects.",
+        when_to_use: "Исходящие HTTP/HTTPS запросы — FlUrl — стандартный async HTTP клиент MyJetTools.",
     },
     DocEntry {
         filename: "dioxus-bootstrap.md",
+        tool: "get_dioxus_bootstrap_guide",
         name: "Dioxus Fullstack Bootstrap Guide",
         description: "Bootstrap a new empty Dioxus fullstack web application",
-        when_to_use: "Read at the start of a new Dioxus fullstack project. Covers workspace setup, feature flags, entry points, and initial routing.",
+        when_to_use: "Создание нового Dioxus fullstack проекта — workspace, feature flags, entry points, routing.",
     },
     DocEntry {
         filename: "dioxus-fullstack-design-patterns.md",
+        tool: "get_dioxus_fullstack_design_patterns",
         name: "Dioxus Fullstack Design Patterns",
         description: "Playbook for dialogs, forms, lists, and server functions",
-        when_to_use: "Read when implementing UI features in an existing Dioxus app — standard patterns for server functions, dialogs, reactive lists, and form handling.",
+        when_to_use: "Dioxus: диалоги, формы, списки, server functions в существующем приложении.",
     },
     DocEntry {
         filename: "dioxus-utils-readme.md",
+        tool: "get_dioxus_utils_readme",
         name: "dioxus-utils Usage Cases Guide",
         description: "Utilities for Dioxus apps: data state, dialogs, JS helpers",
-        when_to_use: "Read when you need the concrete helper crate behind Dioxus patterns — use-state wrappers, dialog open/close hooks, and JS interop calls. Complements dioxus-fullstack-design-patterns, which covers the patterns; this covers the library API that implements them.",
+        when_to_use: "Dioxus: конкретный API библиотеки dioxus-utils — state wrappers, dialog hooks, JS interop.",
     },
     DocEntry {
         filename: "dioxus-admin-ui-kit.md",
+        tool: "get_dioxus_admin_ui_kit",
         name: "Dioxus Admin UI Kit",
         description: "Ready-made UI components for Dioxus admin panels",
-        when_to_use: "Read when building an internal admin or back-office UI — provides pre-built typed text inputs, sortable table components, and enum dropdown selectors. Use instead of hand-rolling form controls described in dioxus-fullstack-design-patterns.",
+        when_to_use: "Dioxus: админ-панель — готовые typed inputs, sortable tables, enum selectors.",
     },
     DocEntry {
         filename: "my-postgres-readme.md",
+        tool: "get_my_postgres_readme",
         name: "Postgres Design Library",
         description: "Documentation for my-postgres library",
-        when_to_use: "Read when integrating PostgreSQL — covers connection pooling, query macros, bulk operations, and the entity model conventions used in MyJetTools projects.",
+        when_to_use: "PostgreSQL — connection pooling, query macros, bulk operations, entity model conventions.",
     },
     DocEntry {
         filename: "my-no-sql-entity-design-patterns.md",
+        tool: "get_my_no_sql_entity_patterns",
         name: "MyNoSql Entity Design Patterns",
         description: "Design patterns for MyNoSql entities and enums",
-        when_to_use: "Read when designing or modifying MyNoSql table entities — partition key / row key conventions, enum serialization, and versioning patterns.",
+        when_to_use: "MyNoSql таблицы — partition/row key, сериализация enum, версионирование.",
     },
     DocEntry {
         filename: "my-grpc-extensions.md",
+        tool: "get_my_grpc_extensions_readme",
         name: "gRPC extensions",
         description: "Utilities and macros for building gRPC clients and servers",
-        when_to_use: "Read when adding a gRPC client or server — covers the my-grpc-extensions macros, retry policies, and channel management.",
+        when_to_use: "gRPC клиент или сервер — макросы my-grpc-extensions, retry policies, channel management.",
     },
     DocEntry {
         filename: "my-ssh-readme.md",
+        tool: "get_my_ssh_readme",
         name: "SSH connections design library",
         description: "Async SSH helpers for commands, file transfer, and port forwarding",
-        when_to_use: "Read when the service needs to run remote shell commands, transfer files via SCP, or open SSH tunnels programmatically.",
+        when_to_use: "SSH — удалённые команды, SCP, SSH туннели программно.",
     },
     DocEntry {
         filename: "my-tcp-sockets-readme.md",
+        tool: "get_my_tcp_sockets_readme",
         name: "TcpSockets design library",
         description: "Async TCP server/client building blocks with ping/pong and TLS options",
-        when_to_use: "Read when implementing a raw TCP server or client — covers connection lifecycle, ping/pong keep-alive, and optional TLS wrapping.",
+        when_to_use: "TCP сервер или клиент — lifecycle, ping/pong keep-alive, TLS.",
     },
     DocEntry {
         filename: "rust-extensions.md",
+        tool: "get_rust_extensions_readme",
         name: "rust-extensions",
         description: "Low-level utils, queues and other helpers",
-        when_to_use: "Read when you need background queues, lazy-init containers, date/time helpers, or other low-level primitives from the MyJetTools base layer.",
+        when_to_use: "Background queues, lazy-init, date/time helpers и другие low-level примитивы MyJetTools.",
     },
     DocEntry {
         filename: "ci-utils-readme.md",
+        tool: "get_ci_utils_readme",
         name: "ci-utils",
         description: "Build-time helper crate",
-        when_to_use: "Read when setting up build scripts (build.rs) — provides version stamping, git-hash embedding, and protobuf compilation helpers used in CI pipelines.",
+        when_to_use: "Build scripts (build.rs) — version stamping, git-hash, protobuf compilation.",
     },
 ];
+
+pub(super) fn build_yaml() -> String {
+    let mut yaml = String::from("resources:\n");
+    for doc in DOCS {
+        yaml.push_str(&format!(
+            "  - tool: {}\n    when: \"{}\"\n",
+            doc.tool, doc.when_to_use
+        ));
+    }
+    yaml
+}
 
 fn build_html() -> String {
     let mut rows = String::new();

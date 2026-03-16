@@ -12,6 +12,10 @@ pub fn build_controllers(app: &Arc<AppContext>) -> ControllersMiddleware {
     ));
 
     result.register_get_action(Arc::new(
+        crate::http::controllers::ai_docs::GetAiDocsYamlAction::new(app.clone()),
+    ));
+
+    result.register_get_action(Arc::new(
         crate::http::controllers::ai_docs::GetAiDocAction::new(app.clone()),
     ));
 
