@@ -119,6 +119,7 @@ async fn handle_request(
         })?;
 
     HttpOutput::as_text(content.to_string())
+        .add_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         .into_ok_result(true)
         .into()
 }

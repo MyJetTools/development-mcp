@@ -265,5 +265,8 @@ async fn handle_request(
     _action: &GetAiDocsIndexAction,
     _ctx: &HttpContext,
 ) -> Result<HttpOkResult, HttpFailResult> {
-    HttpOutput::as_html(build_html()).into_ok_result(true).into()
+    HttpOutput::as_html(build_html())
+        .add_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        .into_ok_result(true)
+        .into()
 }
