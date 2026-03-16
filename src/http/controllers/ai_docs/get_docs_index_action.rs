@@ -7,7 +7,6 @@ use crate::app::AppContext;
 
 struct DocEntry {
     filename: &'static str,
-    tool: &'static str,
     name: &'static str,
     description: &'static str,
 }
@@ -15,97 +14,81 @@ struct DocEntry {
 const DOCS: &[DocEntry] = &[
     DocEntry {
         filename: "app-bootstrap.md",
-        tool: "get_app_bootstrap_guide",
         name: "App Bootstrap Guide",
         description: "Step-by-step instructions for bootstrapping a new project",
     },
     DocEntry {
         filename: "cargo-dependencies-guide.md",
-        tool: "get_cargo_dependencies_guide",
         name: "Cargo Dependencies Guide",
         description: "How to add dependencies to Cargo.toml",
     },
     DocEntry {
         filename: "mcp-development-guide.md",
-        tool: "get_mcp_development_guide",
         name: "MCP Development Guide",
         description: "Guide for creating MCP resources and Tool Calls",
     },
     DocEntry {
         filename: "http-actions-design-guide.md",
-        tool: "get_http_actions_design_guide",
         name: "HTTP Actions Design Guide",
         description: "HTTP action architecture and patterns for my-http-server",
     },
     DocEntry {
         filename: "flurl-usage-guide.md",
-        tool: "get_flurl_usage_guide",
         name: "FlUrl Usage Guide",
         description: "How to use the FlUrl HTTP client library",
     },
     DocEntry {
         filename: "dioxus-bootstrap.md",
-        tool: "get_dioxus_bootstrap_guide",
         name: "Dioxus Fullstack Bootstrap Guide",
         description: "Bootstrap a new empty Dioxus fullstack web application",
     },
     DocEntry {
         filename: "dioxus-fullstack-design-patterns.md",
-        tool: "get_dioxus_fullstack_design_patterns",
         name: "Dioxus Fullstack Design Patterns",
         description: "Playbook for dialogs, forms, lists, and server functions",
     },
     DocEntry {
         filename: "dioxus-utils-readme.md",
-        tool: "get_dioxus_utils_readme",
         name: "dioxus-utils Usage Cases Guide",
         description: "Utilities for Dioxus apps: data state, dialogs, JS helpers",
     },
     DocEntry {
         filename: "dioxus-admin-ui-kit.md",
-        tool: "get_dioxus_admin_ui_kit",
         name: "Dioxus Admin UI Kit",
         description: "Ready-made UI components for Dioxus admin panels",
     },
     DocEntry {
         filename: "my-postgres-readme.md",
-        tool: "get_my_postgres_readme",
         name: "Postgres Design Library",
         description: "Documentation for my-postgres library",
     },
     DocEntry {
         filename: "my-no-sql-entity-design-patterns.md",
-        tool: "get_my_no_sql_entity_patterns",
         name: "MyNoSql Entity Design Patterns",
         description: "Design patterns for MyNoSql entities and enums",
     },
     DocEntry {
         filename: "my-grpc-extensions.md",
-        tool: "get_my_grpc_extensions_readme",
         name: "gRPC extensions",
         description: "Utilities and macros for building gRPC clients and servers",
     },
     DocEntry {
         filename: "my-ssh-readme.md",
-        tool: "get_my_ssh_readme",
         name: "SSH connections design library",
         description: "Async SSH helpers for commands, file transfer, and port forwarding",
     },
     DocEntry {
         filename: "my-tcp-sockets-readme.md",
-        tool: "get_my_tcp_sockets_readme",
         name: "TcpSockets design library",
         description: "Async TCP server/client building blocks with ping/pong and TLS options",
     },
     DocEntry {
         filename: "rust-extensions.md",
-        tool: "get_rust_extensions_readme",
         name: "rust-extensions",
         description: "Low-level utils, queues and other helpers",
     },
     DocEntry {
         filename: "ci-utils-readme.md",
-        tool: "get_ci_utils_readme",
         name: "ci-utils",
         description: "Build-time helper crate",
     },
@@ -115,8 +98,8 @@ pub(super) fn build_yaml(scheme: &str, host: &str) -> String {
     let mut yaml = String::from("resources:\n");
     for doc in DOCS {
         yaml.push_str(&format!(
-            "  - tool: {}\n    url: \"{}://{}/ai-docs/{}\"\n    description: \"{}\"\n",
-            doc.tool, scheme, host, doc.filename, doc.description
+            "  - url: \"{}://{}/ai-docs/{}\"\n    description: \"{}\"\n",
+            scheme, host, doc.filename, doc.description
         ));
     }
     yaml
