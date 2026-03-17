@@ -43,6 +43,11 @@ const DOCS: &[DocEntry] = &[
         description: "Bootstrap a new empty Dioxus fullstack web application",
     },
     DocEntry {
+        filename: "dioxus-client-side-bootstrap.md",
+        name: "Dioxus Client-Side Bootstrap Guide",
+        description: "Bootstrap a new Dioxus client-side (WASM-only) web application with WebSocket and API calls",
+    },
+    DocEntry {
         filename: "dioxus-fullstack-design-patterns.md",
         name: "Dioxus Fullstack Design Patterns",
         description: "Playbook for dialogs, forms, lists, and server functions",
