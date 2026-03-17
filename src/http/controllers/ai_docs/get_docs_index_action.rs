@@ -97,6 +97,11 @@ const DOCS: &[DocEntry] = &[
         name: "ci-utils",
         description: "Build-time helper crate",
     },
+    DocEntry {
+        filename: "application-architecture-best-practices.md",
+        name: "Application Architecture Best Practices",
+        description: "Complete coding standards: project structure, flows/scripts, gRPC, Postgres, Service Bus, HTTP actions, mappers, MyNoSql, settings, logging, error handling",
+    },
 ];
 
 pub(super) fn build_yaml(scheme: &str, host: &str) -> String {
