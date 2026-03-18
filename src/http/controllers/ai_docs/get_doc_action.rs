@@ -61,6 +61,9 @@ fn get_doc_url(filename: &str) -> Option<&'static str> {
         "application-architecture-best-practices.md" => Some(
             "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/application-architecture-best-practices.md",
         ),
+        "release-guide.md" => Some(
+            "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/release-guide.md",
+        ),
         _ => None,
     }
 }

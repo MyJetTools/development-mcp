@@ -98,6 +98,11 @@ const DOCS: &[DocEntry] = &[
         description: "Build-time helper crate",
     },
     DocEntry {
+        filename: "release-guide.md",
+        name: "Release Guide",
+        description: "How to create releases and deploy services: single-repo and monorepo, gh commands, re-deploy, troubleshooting",
+    },
+    DocEntry {
         filename: "application-architecture-best-practices.md",
         name: "Application Architecture Best Practices",
         description: "Complete coding standards: project structure, flows/scripts, gRPC, Postgres, Service Bus, HTTP actions, mappers, MyNoSql, settings, logging, error handling",
