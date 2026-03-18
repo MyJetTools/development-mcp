@@ -198,6 +198,48 @@ impl AppContext {
 
 **NEVER** put business logic in AppContext.
 **NEVER** put per-request state in AppContext.
+**NEVER** put raw `RwLock<HashMap<...>>` or other raw concurrent containers directly in AppContext — always wrap in a dedicated struct with its own module.
+
+### In-memory State — always a dedicated struct
+
+> **WHY:** A raw `RwLock<HashMap<K, V>>` in AppContext is hard to read and impossible to extend.
+> A dedicated struct gives a clear name, encapsulates locking, and allows adding methods
+> (e.g. `update`, `get_all`, `remove`) without touching AppContext.
+
+```rust
+// ❌ WRONG — raw container in AppContext
+pub struct AppContext {
+    pub bid_ask_cache: RwLock<HashMap<String, BidAskModel>>,
+}
+
+// ✅ CORRECT — dedicated struct in its own module
+// src/bid_ask_cache/bid_ask_cache.rs
+pub struct BidAskCache {
+    data: RwLock<HashMap<String, BidAskModel>>,  // private field
+}
+
+impl BidAskCache {
+    pub fn new() -> Self {
+        Self { data: RwLock::new(HashMap::new()) }
+    }
+
+    pub async fn update(&self, key: String, value: BidAskModel) {
+        self.data.write().await.insert(key, value);
+    }
+
+    pub async fn get_all(&self) -> Vec<BidAskModel> {
+        self.data.read().await.values().cloned().collect()
+    }
+}
+
+// AppContext just holds the struct
+pub struct AppContext {
+    pub bid_ask_cache: BidAskCache,
+}
+```
+
+One struct = one module (`src/{name}/mod.rs` + `src/{name}/{name}.rs`).
+The internal container (`RwLock`, `Mutex`, `DashMap`) is **always private** — callers use methods.
 
 ---
 
