@@ -1,20 +1,20 @@
-## CI / GitHub Actions (single-repo services only)
+## CI / GitHub Actions
 
-> **When to ask:** If the project is a standalone service (its own GitHub repo with one Cargo.toml at the root), ask the user:
-> *"Should I generate a GitHub Actions CI workflow (Dockerfile + release.yaml) via `build.rs`?"*
->
-> **When NOT to use:** If the project is a **monorepo** (multiple crates/services in one repo) — do NOT generate CI via `build.rs`. Monorepos manage CI separately (shared workflow, matrix builds, etc.).
+> **Always ask the user:** *"Should I create a CI workflow for this service?"*
+> The approach depends on whether the project is a single-repo or a monorepo.
 
-If the user confirms — add `ci-utils` as a **build dependency** and create `build.rs`:
+### Single-repo (one service = one GitHub repo)
 
-### Cargo.toml — build dependency
+Use `ci-utils` in `build.rs` to auto-generate Dockerfile + workflow:
+
+#### Cargo.toml — build dependency
 
 ```toml
 [build-dependencies]
 ci-utils = { git = "https://github.com/MyJetTools/ci-utils.git", tag = "0.1.3" }
 ```
 
-### build.rs — basic service
+#### build.rs — basic service
 
 ```rust
 fn main() {
@@ -26,7 +26,7 @@ fn main() {
 }
 ```
 
-### build.rs — with proto files
+#### build.rs — with proto files
 
 ```rust
 fn main() {
@@ -40,7 +40,7 @@ fn main() {
 }
 ```
 
-### build.rs — Dioxus fullstack
+#### build.rs — Dioxus fullstack
 
 ```rust
 fn main() {
@@ -56,6 +56,87 @@ fn main() {
 - Only add `.with_ci_test()` if the project has at least one `#[test]`
 - Never use `tonic_build` directly — always via `ci_utils::ProtoFileBuilder`
 - Run `cargo build` once after creating `build.rs` — it generates `.github/workflows/release.yaml` and `Dockerfile`
+
+### Monorepo (multiple services in one GitHub repo)
+
+Do **NOT** use `ci-utils` / `build.rs`. Create Dockerfile and workflow manually per service.
+
+Each service gets its own tag pattern `{service-name}-*` and its own workflow file.
+
+#### Dockerfile — `{service-dir}/Dockerfile`
+
+```dockerfile
+FROM ubuntu:22.04
+COPY ./target/release/{service-name} ./target/release/{service-name}
+ENTRYPOINT ["./target/release/{service-name}"]
+```
+
+#### Workflow — `.github/workflows/release-{service-name}.yaml`
+
+```yaml
+name: Release App
+on:
+  push:
+    tags:
+      - "{service-name}-*"
+
+env:
+  IMAGE_NAME: ghcr.io/{repo-org}/{service-name}
+  DIR: {service-dir}
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Get the version
+        id: get_version
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG##*-}"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Updating version
+        run: |
+          cd ${DIR}
+          sed -i -e 's/^version = .*/version = "${{ steps.get_version.outputs.VERSION }}"/' Cargo.toml
+
+      # Add this step ONLY if the service uses proto files:
+      # - name: Install Protoc
+      #   uses: arduino/setup-protoc@v1
+
+      - run: |
+          export GIT_HUB_TOKEN="${{ secrets.PUBLISH_TOKEN }}"
+          cd ${DIR}
+          cargo build --release
+
+      - name: Docker login
+        run: |
+          echo "${{ secrets.PUBLISH_TOKEN }}" | docker login https://ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Docker Build and Publish
+        run: |
+          cd ${DIR}
+          docker build -t ${IMAGE_NAME}:${{ steps.get_version.outputs.VERSION }} .
+          docker push ${IMAGE_NAME}:${{ steps.get_version.outputs.VERSION }}
+```
+
+**Placeholders to replace:**
+- `{service-name}` — crate name from `Cargo.toml` (e.g. `price-feed-binance`)
+- `{service-dir}` — directory name (usually same as service-name)
+- `{repo-org}` — GitHub org or repo path for docker image (e.g. `my-margin-trading`)
+
+**Release:** `git tag {service-name}-0.1.0 && git push --tags`
+
+**Rules:**
+- One workflow file per service: `release-{service-name}.yaml`
+- Tag pattern: `{service-name}-*` — version is extracted after the last `-`
+- Add `Install Protoc` step only if the service compiles `.proto` files
+- Dockerfile lives inside the service directory, not at repo root
 
 ---
 
