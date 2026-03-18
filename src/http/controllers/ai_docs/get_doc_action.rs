@@ -17,7 +17,7 @@ fn get_doc_url(filename: &str) -> Option<&'static str> {
             "https://raw.githubusercontent.com/MyJetTools/my-http-server/refs/heads/main/HTTP_ACTIONS_DESIGN.md",
         ),
         "app-bootstrap.md" => Some(
-            "https://raw.githubusercontent.com/MyJetTools/service-sdk/refs/heads/main/APP_BOOTSTRAP.md",
+            "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/app-bootstrap.md",
         ),
         "dioxus-bootstrap.md" => Some(
             "https://raw.githubusercontent.com/amigin/ai-templates/refs/heads/main/cursor/bootstrap-empty-dioxus-fullstack-project.mdc",
