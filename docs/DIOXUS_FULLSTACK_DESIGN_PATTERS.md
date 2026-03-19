@@ -330,7 +330,39 @@ use crate::margin_engine_grpc::SwapProfileGrpcModel;
 pub async fn get_swap_profiles() -> Result<Vec<SwapProfileModel>, ServerFnError> { ... }
 ```
 
-### 13) `NotifyChildComponent<TValue>` — parent-to-child notification
+### 13) GET server functions — query parameters in route
+
+`#[get]` endpoints pass parameters via query string, not request body. You **must** declare each parameter in the route string using `?param` syntax — otherwise the parameter will not be extracted from the URL.
+
+```rust
+// ✅ CORRECT — parameter declared in route, extracted from query string
+#[get("/api/accounts/get?account_id")]
+pub async fn get_account(account_id: i64) -> Result<Option<AccountModel>, ServerFnError> {
+    // account_id is extracted from ?account_id=123
+}
+
+// ✅ CORRECT — multiple query params
+#[get("/api/orders/search?account_id&status")]
+pub async fn search_orders(account_id: i64, status: String) -> Result<Vec<OrderModel>, ServerFnError> {
+    // ...
+}
+
+// ✅ CORRECT — no params, no query string needed
+#[get("/api/instruments/get")]
+pub async fn get_all_instruments() -> Result<Vec<InstrumentModel>, ServerFnError> {
+    // ...
+}
+
+// ❌ WRONG — param in signature but NOT in route, will not be received
+#[get("/api/accounts/get")]
+pub async fn get_account(account_id: i64) -> Result<Option<AccountModel>, ServerFnError> {
+    // account_id is always 0 / default — never extracted
+}
+```
+
+**Rule:** `#[post]` sends parameters in the request body — no `?param` needed. Only `#[get]` requires this.
+
+### 14) `NotifyChildComponent<TValue>` — parent-to-child notification
 
 Use when a parent action (e.g. deposit, save) must trigger a child component to reload its own `DataState`, and the child manages its state independently (not in the parent's state).
 
@@ -372,7 +404,7 @@ fn ChildComponent(notify_balance: NotifyChildComponent<()>) -> Element {
 - The notification is consumed once — child's `use_effect` fires, clears the value, runs callback
 - After `.reset()` on `DataState`, the `get_data` helper sees `None` and spawns a reload automatically
 
-### 14) `dialog_template` / `dialog_template_ex` — standard dialog wrapper
+### 15) `dialog_template` / `dialog_template_ex` — standard dialog wrapper
 
 All dialogs use `dialog_template` (or `dialog_template_ex` for custom size) instead of inlining modal HTML. This keeps dialog structure consistent and eliminates boilerplate.
 
