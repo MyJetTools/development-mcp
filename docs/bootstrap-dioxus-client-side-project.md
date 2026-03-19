@@ -146,6 +146,8 @@ fn main() {
 
 CSS source files live in `css/`, numbered for ordering. `build.rs` compiles them into a single `public/assets/app.css`.
 
+**NEVER** edit `public/assets/app.css` directly — it is auto-generated on every build and all manual changes will be lost. Always add or edit CSS in the `css/` directory. To add new styles, create a new numbered file (e.g. `07-toast.css`) and register it in `build.rs`.
+
 ## main.rs — Routing and WebSocket
 
 Client-side apps typically have **pre-auth pages** (login, code verification) and **post-auth pages** (dashboard, etc.). The `App` component decides whether to start a WebSocket connection based on the current route.
@@ -795,6 +797,6 @@ dx build --package your-project-name
 5. **`GlobalAppSettings::get_origin()`** — returns the page origin, use it to build API and WS URLs
 6. **`dioxus_utils::console_log()`** — for browser console logging
 7. **Pre-auth vs post-auth pages** — controlled by `LocationState` and `with_ws` flag on `App` component
-8. **CSS compiled by `build.rs`** — source in `css/`, output in `public/assets/app.css`
+8. **CSS compiled by `build.rs`** — source in `css/`, output in `public/assets/app.css`. **NEVER** edit `app.css` directly
 9. **Favicon required** — `public/favicon.ico`
 10. **Docker image** — `myjettools/web-app-host:0.1.1` serves static files from `./wwwroot`
