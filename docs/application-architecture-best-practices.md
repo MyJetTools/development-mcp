@@ -819,6 +819,23 @@ impl AppContext {
 **NEVER** store `ServiceContext` in `AppContext`.
 `service_ctx` lives in `main.rs` until `start_application()` is called — used to register SB subscribers after AppContext is created.
 
+### Waiting for Initial Snapshot — CRITICAL
+
+`MyNoSqlDataReaderTcp` connects via TCP and receives a table snapshot asynchronously. Between creating the reader and receiving the first snapshot, there is a delay. If you read data before the snapshot arrives — you get empty results.
+
+Method `wait_until_first_data_arrives()` blocks until the first snapshot is received:
+
+```rust
+// ✅ CORRECT — wait for snapshot before reading
+app.instruments_reader.wait_until_first_data_arrives().await;
+let instruments = app.instruments_reader.get_by_partition_key("i").await;
+
+// ❌ WRONG — reading immediately, data may be empty
+let instruments = app.instruments_reader.get_by_partition_key("i").await;
+```
+
+**ALWAYS** call `wait_until_first_data_arrives()` before the first read from a reader (typically in `scripts/init.rs`).
+
 ---
 
 ## Mappers Pattern
