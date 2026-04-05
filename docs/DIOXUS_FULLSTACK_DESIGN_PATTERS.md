@@ -1,13 +1,13 @@
-## Dioxus Fullstack Design Patterns (Project Playbook)
+# Dioxus Fullstack Design Patterns (Project Playbook)
 
 Applies to Dioxus **fullstack** projects (shared code server/web). Use these when adding dialogs, forms, list views, or server functions. Adapt names as needed.
 
-### Naming conventions
+## Naming conventions
 - **`cs`** – the mutable signal holding component state (`let mut cs = use_signal(...)`)
 - **`cs_ra`** – a read-access snapshot of `cs` (`let cs_ra = cs.read()`)
 - Use `cs` for writes (`cs.write().field = value`) and `cs_ra` for reads in the render phase.
 
-### 0) Shared models (client + server)
+## 0) Shared models (client + server)
 - **Rule**: If a struct is used both on server **and** client (e.g., returned from a server function and rendered in UI) → put it in `src/models`.
 - **Rule**: If a struct is only used inside a server function (e.g., parsing an external API response) → keep it private in the `src/api/*.rs` file, gated with `#[cfg(feature = "server")]`.
 - **Naming**: Models returned from server functions (HTTP/server fn boundary) use the `HttpModel` suffix: `BalanceHistoryHttpModel`, `InstrumentHttpModel`.
@@ -19,7 +19,7 @@ Applies to Dioxus **fullstack** projects (shared code server/web). Use these whe
   - `BalanceHistoryHttpModel` → in `src/models/balance_history.rs` (returned to client, shown in UI)
   - `BinanceExchangeInfo` → private in `src/api/binance.rs` with `#[cfg(feature = "server")]` (only used to parse external API response)
 
-### 0.1) Mappers (server-only)
+## 0.1) Mappers (server-only)
 - Mappers know about gRPC/server contracts — they live in `src/server/` (not visible to client code).
 - **1:1 mapping** → `impl From<GrpcModel> for HttpModel`, then in api: `.map(|i| i.into()).collect()`
 - **Complex mapping** (multiple structs, logic) → a mapper function in `src/server/mappers/`
@@ -36,7 +36,7 @@ impl From<BalanceHistoryGrpcModel> for BalanceHistoryHttpModel {
 Ok(items.into_iter().map(|i| i.into()).collect())
 ```
 
-### 0.2) API calls — always full path, never `use`
+## 0.2) API calls — always full path, never `use`
 ```rust
 // ✅ CORRECT — visible that this is a server function call
 crate::api::accounts::get_account(id).await
@@ -47,7 +47,7 @@ use crate::api::accounts::get_account;
 get_account(id).await
 ```
 
-### 1) Dialogs: lifecycle and rendering
+## 1) Dialogs: lifecycle and rendering
 - Keep a global `DialogState` in context (`Signal<DialogState>`). Define variants per dialog (`Confirmation`, `EditInstrument`, etc.).
 - Render all dialogs centrally via `RenderDialog`, matching on `DialogState` and embedding the concrete dialog component.
 - Use `DialogTemplate` for consistent header, close "X", cancel button, and optional OK slot.
@@ -72,7 +72,7 @@ get_account(id).await
   }
   ```
 
-### 2) Opening dialogs from views
+## 2) Opening dialogs from views
 - In tables or lists, set `DialogState` with the target item and an `on_ok` callback.
 - `on_ok` should perform the mutation (e.g., save) and then reset any list state so the data reloads.
 - Example flow:
@@ -97,7 +97,7 @@ get_account(id).await
   }
   ```
 
-### 3) Form state management
+## 3) Form state management
 - Store form state in a struct held by `use_signal` (e.g., `EditInstrumentState`).
 - Keep string/parsed numeric fields via `InputValue<T>` so validation is easy: `value_is_valid()` and `get_value()`.
 - Drive UI enablement: compute `ok_is_disabled = !state.validation_ok()`.
@@ -119,7 +119,7 @@ get_account(id).await
   }
   ```
 
-### 4) Inputs and events
+## 4) Inputs and events
 - Use the shared input components (`InputString`, `input_i64`, `InputBool`, etc.) and pass `EventHandler` callbacks that update the signal-backed state.
 - Keep handlers lightweight: update state, then early-return on invalid input; avoid inline heavy work.
 - For Enter/keyboard behaviors, use the provided `on_enter_pressed` in inputs when needed.
@@ -132,7 +132,7 @@ get_account(id).await
   );
   ```
 
-### 5) Async actions in dialogs
+## 5) Async actions in dialogs
 - Wrap network or long work in `spawn` to avoid blocking UI.
 - Set boolean flags before/after the await (e.g., `is_checking_binance`) to disable buttons and show progress text.
 - On success, update state (e.g., auto-fill accuracy). On failure, store a status message in state for rendering.
@@ -161,7 +161,7 @@ get_account(id).await
   };
   ```
 
-### 6) Data loading — DataState + `get_data` pattern
+## 6) Data loading — DataState + `get_data` pattern
 
 **Every** piece of async data uses `DataState<T>` and a `get_data` helper function. Never call API directly in a component body or trigger loading via manual `loading: bool` fields.
 
@@ -217,7 +217,7 @@ cs.write().data.reset();
 
 If the reset is triggered from **outside** the component (e.g., parent after a mutation), the `DataState` must be accessible from the caller: either lift it into the parent's state or pass `Signal<ChildState>` as a prop.
 
-### 7) Component structure for pages with tabs and lists
+## 7) Component structure for pages with tabs and lists
 
 - Each **tab** is its own `#[component]` receiving an ID prop and owning its `DataState`.
 - Each **list within a tab** (e.g., active positions + pending orders) is also a separate component with its own `DataState`.
@@ -237,7 +237,7 @@ When a child tab needs to be reloaded from the parent (e.g., balance history aft
 - Lift the `DataState` into the parent's state and pass `Signal<PageState>` to the tab, or
 - Pass `Signal<ChildState>` as a prop so the parent can call `.reset()` directly.
 
-### 8) Server functions as API boundary (fullstack)
+## 8) Server functions as API boundary (fullstack)
 - Use Dioxus fullstack server functions (`#[get]`, `#[post]` in `src/api/*`) for all client <-> server calls; they compile to RPCs on web and direct calls on server.
 - Keep them thin: fetch app context, perform storage/NoSQL ops, return typed models (`InstrumentHttpModel`, etc.).
 - Prefer `Result<T, ServerFnError>`; let the client handle loading/error rendering via `DataState`.
@@ -253,7 +253,7 @@ When a child tab needs to be reloaded from the parent (e.g., balance history aft
   }
   ```
 
-### 9) Dialog template usage
+## 9) Dialog template usage
 - Provide `header`, optional `header_content`, main `content`, optional `ok_button`, and `allocate_max_space` when needed.
 - Cancel/close is built in; for custom OK, pass a button element to `ok_button`.
 - The close "X" uses the dialog context; no per-dialog wiring required.
@@ -275,7 +275,7 @@ When a child tab needs to be reloaded from the parent (e.g., balance history aft
   }
   ```
 
-### 10) Signal handling tips
+## 10) Signal handling tips
 - Signals are `Copy`; capture once in handlers. Only clone when moving into async blocks.
 - Avoid nested `cs.clone()` layers unless a separate handle is truly needed.
 - Read with `.read()` for an immutable snapshot; write with `.write()` to mutate.
@@ -291,11 +291,11 @@ When a child tab needs to be reloaded from the parent (e.g., balance history aft
   };
   ```
 
-### 10.1) Client-side "now" date/time
+## 10.1) Client-side "now" date/time
 - **Rule**: If "now" date/time must be resolved on the **client side** in a Dioxus fullstack app, use `dioxus_utils::now_date_time()`.
 - This avoids server-side resolution and keeps client-local time semantics correct.
 
-### 11) Status messaging
+## 11) Status messaging
 - Store transient statuses (availability checks, errors) in the form state and render inline near the related control.
 - Clear stale statuses when the input they depend on changes.
 - **Example**
@@ -308,7 +308,7 @@ When a child tab needs to be reloaded from the parent (e.g., balance history aft
   }
   ```
 
-### 12) `use` imports in server functions — always inside the function body
+## 12) `use` imports in server functions — always inside the function body
 
 In server functions (`#[get]`, `#[post]`), put **all `use` imports inside the function body**, not at the file level. Top-level imports cause `unused import` warnings on the web target where `feature = "server"` is disabled.
 
@@ -330,7 +330,7 @@ use crate::margin_engine_grpc::SwapProfileGrpcModel;
 pub async fn get_swap_profiles() -> Result<Vec<SwapProfileModel>, ServerFnError> { ... }
 ```
 
-### 13) GET server functions — query parameters in route
+## 13) GET server functions — query parameters in route
 
 `#[get]` endpoints pass parameters via query string, not request body. You **must** declare each parameter in the route string using `?param` syntax — otherwise the parameter will not be extracted from the URL.
 
@@ -362,7 +362,7 @@ pub async fn get_account(account_id: i64) -> Result<Option<AccountModel>, Server
 
 **Rule:** `#[post]` sends parameters in the request body — no `?param` needed. Only `#[get]` requires this.
 
-### 14) `NotifyChildComponent<TValue>` — parent-to-child notification
+## 14) `NotifyChildComponent<TValue>` — parent-to-child notification
 
 Use when a parent action (e.g. deposit, save) must trigger a child component to reload its own `DataState`, and the child manages its state independently (not in the parent's state).
 
@@ -404,7 +404,7 @@ fn ChildComponent(notify_balance: NotifyChildComponent<()>) -> Element {
 - The notification is consumed once — child's `use_effect` fires, clears the value, runs callback
 - After `.reset()` on `DataState`, the `get_data` helper sees `None` and spawns a reload automatically
 
-### 15) `dialog_template` / `dialog_template_ex` — standard dialog wrapper
+## 15) `dialog_template` / `dialog_template_ex` — standard dialog wrapper
 
 All dialogs use `dialog_template` (or `dialog_template_ex` for custom size) instead of inlining modal HTML. This keeps dialog structure consistent and eliminates boilerplate.
 
@@ -455,3 +455,114 @@ let data = match get_data(cs, &cs_ra) {
 ```
 
 Cancel button and close (×) are built into `dialog_template` — no need to add them.
+
+## 16) State methods over inline handler logic
+
+**Rule**: Put domain logic into methods on the state struct. Event handlers call these methods via a single `cs.write().method(...)` — never inline the logic directly in closures.
+
+**Why:**
+- **Testable**: methods on plain structs are unit-testable without Dioxus runtime
+- **Atomic**: one `.write()` call updates all related fields together — no risk of partial state between multiple `.set()` calls or multiple `.write()` accesses
+- **Readable**: handler becomes a one-liner, state struct documents the contract
+- **Reliable**: with separate signals and multiple `.set()` calls inside a handler, Dioxus may not batch updates correctly across different signals — one render cycle may see only a subset of changes. A single state struct with one `.write()` guarantees all fields update atomically.
+
+```rust
+// ✅ CORRECT — logic in state methods, handlers are one-liners
+
+struct TpSlInputState {
+    tp_price: String,
+    tp_pct: String,
+    sl_price: String,
+    sl_pct: String,
+}
+
+impl TpSlInputState {
+    fn set_tp_price(&mut self, val: String, open_price: f64, is_buy: bool, leverage: f64) {
+        self.tp_price = val.clone();
+        if val.is_empty() {
+            self.tp_pct = String::new();
+        } else {
+            self.tp_pct = price_to_pct_str(&val, open_price, is_buy, true, leverage);
+        }
+    }
+
+    fn set_tp_pct(&mut self, val: String, open_price: f64, is_buy: bool, accuracy: usize, leverage: f64) {
+        self.tp_pct = val.clone();
+        if val.is_empty() {
+            self.tp_price = String::new();
+        } else {
+            self.tp_price = pct_to_price_str(&val, open_price, is_buy, true, accuracy, leverage);
+        }
+    }
+}
+
+// Handler — one line, all updates are atomic
+oninput: move |evt: Event<FormData>| {
+    input_state.write().set_tp_price(evt.value(), open_price, is_buy, leverage);
+},
+
+// ❌ WRONG — inline logic, multiple .set() calls on separate signals
+oninput: move |evt: Event<FormData>| {
+    let val = evt.value();
+    tp_price_str.set(val.clone());
+    tp_pct_str.set(price_to_pct_str(&val, open_price, is_buy, true, leverage));
+},
+```
+
+**When to extract a method:**
+- Handler updates **2+ fields** that are logically coupled (e.g., price ↔ percent, status + error)
+- The same update logic is used in **multiple handlers** (e.g., `oninput` and `onkeydown` for the same field)
+- The logic is **non-trivial** (conditionals, calculations, validation)
+
+**Testing**: since methods are on a plain struct, unit tests don't need Dioxus:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn set_tp_price_updates_pct() {
+        let mut state = TpSlInputState { tp_price: String::new(), tp_pct: String::new(), .. };
+        state.set_tp_price("1.10".into(), 1.0, true, 1.0);
+        assert_eq!(state.tp_price, "1.10");
+        let pct: f64 = state.tp_pct.parse().unwrap();
+        assert!((pct - 10.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn empty_price_clears_pct() {
+        let mut state = TpSlInputState { tp_price: "1.10".into(), tp_pct: "10.00".into(), .. };
+        state.set_tp_price(String::new(), 1.0, true, 1.0);
+        assert_eq!(state.tp_price, "");
+        assert_eq!(state.tp_pct, "");
+    }
+}
+```
+
+**Also applies to client-side Dioxus projects** — the pattern is framework-agnostic and works identically with `dioxus/web` (WASM-only) apps.
+
+## 17) Controlled inputs — use cloned values, not format strings
+
+When binding input values to state, **clone values before the `rsx!` block** and pass them directly. Do not use format-string interpolation with signals.
+
+```rust
+// ✅ CORRECT — read state, clone values, pass directly
+let is_ra = input_state.read();
+let tp_price_val = is_ra.tp_price.clone();
+let tp_pct_val = is_ra.tp_pct.clone();
+drop(is_ra);
+
+rsx! {
+    input { value: tp_price_val, oninput: move |evt| { ... } }
+    input { value: tp_pct_val, oninput: move |evt| { ... } }
+}
+
+// ❌ WRONG — format-string interpolation with signals may not trigger cross-input updates
+rsx! {
+    input { value: "{tp_price_str}", oninput: move |evt| { ... } }
+    input { value: "{tp_pct_str}", oninput: move |evt| { ... } }
+}
+```
+
+**Why:** Format-string bindings (`"{signal}"`) read signals individually. When one handler updates multiple separate signals, Dioxus may not correctly batch DOM updates for all affected inputs. Cloned values from a single state struct avoid this issue entirely.
