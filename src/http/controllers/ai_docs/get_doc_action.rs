@@ -34,6 +34,9 @@ fn get_doc_url(filename: &str) -> Option<&'static str> {
         "my-tcp-sockets-readme.md" => Some(
             "https://raw.githubusercontent.com/MyJetTools/my-tcp-sockets/refs/heads/main/README.md",
         ),
+        "my-web-socket-client-guide.md" => Some(
+            "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/my-web-socket-client-guide.md",
+        ),
         "rust-extensions.md" => Some(
             "https://raw.githubusercontent.com/MyJetTools/rust-extensions/refs/heads/main/README.md",
         ),

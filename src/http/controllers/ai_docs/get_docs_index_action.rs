@@ -88,6 +88,11 @@ const DOCS: &[DocEntry] = &[
         description: "Async TCP server/client building blocks with ping/pong and TLS options",
     },
     DocEntry {
+        filename: "my-web-socket-client-guide.md",
+        name: "WebSocket Client Guide",
+        description: "WebSocket client for non-WASM apps: auto-reconnect, heartbeat, callbacks, compression",
+    },
+    DocEntry {
         filename: "rust-extensions.md",
         name: "rust-extensions",
         description: "Low-level utils, queues and other helpers",
