@@ -87,25 +87,9 @@ pub async fn get_account(account_id: i64) -> ... // account_id is always 0
 
 `#[post]` sends parameters in request body — no `?param` needed.
 
-## 6) `dialog_template` / `dialog_template_ex` — standard dialog wrapper (admin projects)
+## 6) Dialog template and form patterns — see common patterns
 
-All admin dialogs use `dialog_template` instead of inlining modal HTML:
-
-```rust
-// Standard size
-super::dialog_template(title, content, ok_button)
-
-// Custom size
-super::dialog_template_ex(title, content, ok_button, Some("modal-xl"))
-
-// Loading state
-let data = match get_data(cs, &cs_ra) {
-    Ok(d) => d,
-    Err(el) => return super::dialog_template(title, el, rsx! {}),
-};
-```
-
-Cancel button and close (×) are built into `dialog_template`.
+`dialog_template` / `dialog_template_ex` is a **common pattern** for all Dioxus projects. See **dioxus-design-patterns.md §9** for full documentation.
 
 ## 7) Form state management (admin projects)
 

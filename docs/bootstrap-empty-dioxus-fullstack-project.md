@@ -14,6 +14,9 @@ project-root/
 ├── Cargo.toml
 ├── Dioxus.toml
 ├── build.rs
+├── css/
+│   ├── 01-common.css
+│   └── 99-desktop.css
 ├── src/
 │   ├── main.rs
 │   ├── api/
@@ -35,7 +38,7 @@ project-root/
 └── public/
     ├── favicon.ico
     └── assets/
-        └── styled.css
+        └── app.css          ← compiled by build.rs from css/ files
 ```
 
 ## Cargo.toml Setup
@@ -100,7 +103,7 @@ index_on_404 = true
 
 [web.resource]
 # CSS style file
-style = ["/assets/styled.css", "/assets/app.css"]
+style = ["/assets/app.css"]
 
 # Javascript code file
 script = ["/assets/bootstrap.js"]
@@ -112,6 +115,21 @@ script = ["/assets/bootstrap.js"]
 # serve: [dev-server] only
 script = []
 ```
+
+## build.rs — CSS Compilation
+
+CSS source files live in `css/`, compiled into `public/assets/app.css`. See **dioxus-design-patterns.md §15** for full details.
+
+```rust
+fn main() {
+    ci_utils::css::CssCompiler::new("./css")
+        .add_file("01-common.css")
+        .add_file("99-desktop.css")
+        .compile("./public/assets/app.css");
+}
+```
+
+**NEVER** edit `public/assets/app.css` directly — it is auto-generated on every build. Always add or edit CSS in the `css/` directory. To add new styles, create a new numbered file (e.g. `02-layout.css`) and register it in `build.rs`.
 
 ## Main.rs Structure
 
@@ -257,16 +275,6 @@ Since it's a fullstack project, the server module is required:
 ### src/server/mod.rs
 ```rust
 // Server module - server-side functionality
-```
-
-## Build.rs
-
-Create a `build.rs` file:
-
-```rust
-fn main() {
-
-}
 ```
 
 ## Summary

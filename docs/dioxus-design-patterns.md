@@ -205,9 +205,31 @@ cv.container_class = Some("mini-chart-container".to_string());
 
 When a child component needs to write back to the struct (e.g. zoom via mouse wheel), pass `Signal<Struct>` — not individual `Signal<usize>` per field.
 
-## 9) Dialogs: lifecycle and rendering
+## 9) Dialogs: lifecycle, rendering, and template
 
-Central `DialogState` enum + `RenderDialog` router:
+### DialogState — always part of AppState
+
+`DialogState` is **always a field of `AppState`** — dialogs render globally as an overlay, so `RenderDialog` reads from `AppState`:
+
+```rust
+#[derive(Default)]
+pub struct AppState {
+    dialog_state: DialogState,
+    // ... other fields
+}
+
+impl AppState {
+    pub fn get_dialog_state(&self) -> &DialogState {
+        &self.dialog_state
+    }
+
+    pub fn open_edit_tp_sl(&mut self, order: EditTpSl, instrument_name: String, accuracy: usize) {
+        self.dialog_state = DialogState::EditTpSl { order, instrument_name, accuracy };
+    }
+}
+```
+
+### DialogState enum + RenderDialog router
 
 ```rust
 #[derive(Default)]
@@ -236,6 +258,24 @@ pub fn RenderDialog() -> Element {
 ```
 
 Each dialog = its own folder (see §3). Open dialogs by setting state: `app_state.write().open_edit_tp_sl(...)`.
+
+### `dialog_template` — standard wrapper for all dialogs
+
+All dialogs use `dialog_template` instead of inlining modal HTML. Cancel button and close (x) are **built into** the template — never add them manually:
+
+```rust
+// Standard size
+super::dialog_template(title, content, ok_button)
+
+// Custom size (e.g. wide dialog)
+super::dialog_template_ex(title, content, ok_button, Some("modal-xl"))
+
+// When data is loading — pass loading/error element as content
+let data = match get_data(cs, &cs_ra) {
+    Ok(d) => d,
+    Err(el) => return super::dialog_template(title, el, rsx! {}),
+};
+```
 
 ## 10) DataState + `get_data` pattern — for async data
 
@@ -282,7 +322,7 @@ fn get_my_data<'a>(
 }
 ```
 
-**Forced reload after mutation**: `.reset()` on `DataState` → returns to `None` → next render triggers fresh load.
+**Forced reload after mutation**: `.reset()` on `DataState` — returns to `None` — next render triggers fresh load.
 
 ## 11) Tabs and lists — each = own component with own state
 
@@ -319,8 +359,97 @@ get_account(id).await
 
 ## 14) `NotifyChildComponent<TValue>` — parent-to-child notification
 
-When a parent action must trigger a child reload, and the child manages its own `DataState`:
+When a parent action must trigger a child update (e.g. repaint, DataState reset), and the child manages its own state.
 
-**Parent**: create `NotifyChildComponent::<()>::new()`, pass as prop, call `notify_other_components(())` after mutation.
+### Parent — create, notify, pass as prop
 
-**Child**: call `on_notify(callback)` at component top level (wraps `use_effect`). In callback: `cs.write().data.reset()`.
+```rust
+#[component]
+fn ChartPanel() -> Element {
+    // 1. Create notifier
+    let repaint_notify = dioxus_utils::NotifyChildComponent::<()>::new();
+
+    let mut chart_view = use_signal(|| ChartViewState::new("chart", instrument_id, 0));
+
+    rsx! {
+        // Toolbar — notify on style change
+        button {
+            onclick: move |_| {
+                chart_view.write().candle_style = CandleStyle::Candles;
+                // 2. Notify child
+                repaint_notify.notify_other_components(());
+            },
+            "Candles"
+        }
+        button {
+            onclick: move |_| {
+                chart_view.write().candle_style = CandleStyle::Line;
+                repaint_notify.notify_other_components(());
+            },
+            "Line"
+        }
+
+        // 3. Pass notifier as prop to child
+        CanvasChart { view: chart_view, repaint_notify }
+    }
+}
+```
+
+### Child — receive as prop, subscribe with `on_notify`
+
+```rust
+#[component]
+pub fn CanvasChart(
+    mut view: Signal<ChartViewState>,
+    repaint_notify: dioxus_utils::NotifyChildComponent<()>,
+) -> Element {
+    let mut cs = use_signal(ChartState::default);
+
+    // Subscribe to parent notifications
+    repaint_notify.on_notify(move |_| {
+        // React to parent change — e.g. repaint canvas
+        let state_ra = cs.read();
+        if state_ra.loaded {
+            do_repaint(&state_ra);
+        }
+    });
+
+    // ... render
+    rsx! { canvas { id: "chart-canvas" } }
+}
+```
+
+### Rules
+
+- `NotifyChildComponent` is `Copy` — safe to capture in multiple handlers
+- `on_notify()` wraps `use_effect` — call it at the top level of the component, not inside conditions
+- Use `()` as the type parameter when the notification carries no data — just a "something changed" signal
+- For DataState reloads: `repaint_notify.on_notify(move |_| { cs.write().data.reset(); });`
+
+## 15) CSS — source files in `css/`, compiled by `build.rs`
+
+CSS source files live in `css/` directory, numbered for ordering. `build.rs` compiles them into a single `public/assets/app.css`:
+
+```
+css/
+├── 01-common.css
+├── 02-layout.css
+├── 03-inputs.css
+├── 04-buttons.css
+└── 99-desktop.css
+```
+
+```rust
+// build.rs
+fn main() {
+    ci_utils::css::CssCompiler::new("./css")
+        .add_file("01-common.css")
+        .add_file("02-layout.css")
+        .add_file("03-inputs.css")
+        .add_file("04-buttons.css")
+        .add_file("99-desktop.css")
+        .compile("./public/assets/app.css");
+}
+```
+
+**NEVER** edit `public/assets/app.css` directly — it is auto-generated on every build and all manual changes will be lost. Always add or edit CSS in the `css/` directory. To add new styles, create a new numbered file (e.g. `07-toast.css`) and register it in `build.rs`.
