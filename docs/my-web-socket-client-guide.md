@@ -78,35 +78,9 @@ impl WsCallback for MyWsCallback {
 }
 ```
 
-### 3. Implement `Logger` — required by `WebSocketClient`
+### 3. Wire everything together in `main()`
 
-If using `service-sdk`, pass `service_sdk::my_logger::LOGGER.clone()`. Otherwise implement a simple console logger:
-
-```rust
-use std::collections::HashMap;
-
-struct ConsoleLogger;
-
-impl rust_extensions::Logger for ConsoleLogger {
-    fn write_info(&self, process: String, message: String, _ctx: Option<HashMap<String, String>>) {
-        println!("[INFO] {}: {}", process, message);
-    }
-    fn write_warning(&self, process: String, message: String, _ctx: Option<HashMap<String, String>>) {
-        println!("[WARN] {}: {}", process, message);
-    }
-    fn write_error(&self, process: String, message: String, _ctx: Option<HashMap<String, String>>) {
-        eprintln!("[ERROR] {}: {}", process, message);
-    }
-    fn write_fatal_error(&self, process: String, message: String, _ctx: Option<HashMap<String, String>>) {
-        eprintln!("[FATAL] {}: {}", process, message);
-    }
-    fn write_debug_info(&self, process: String, message: String, _ctx: Option<HashMap<String, String>>) {
-        println!("[DEBUG] {}: {}", process, message);
-    }
-}
-```
-
-### 4. Wire everything together in `main()`
+`WebSocketClient::new` requires `Arc<dyn Logger + Send + Sync + 'static>`. Use `my_logger::LOGGER` from `service-sdk`:
 
 ```rust
 use std::sync::Arc;
@@ -119,9 +93,9 @@ async fn main() {
     my_web_socket_client::my_tls::install_default_crypto_providers();
 
     let client = WebSocketClient::new(
-        Arc::new("MyClient".into()),   // client name (for logging)
-        Arc::new(MySettings),           // WsClientSettings impl
-        Arc::new(ConsoleLogger),        // Logger impl
+        Arc::new("MyClient".into()),              // client name (for logging)
+        Arc::new(MySettings),                      // WsClientSettings impl
+        service_sdk::my_logger::LOGGER.clone(),    // Logger from my_logger
     );
 
     // Start with optional heartbeat message
@@ -254,21 +228,6 @@ impl MyWsCallback {
 ```
 
 **Important:** The `Decompress` instance must be kept alive across messages (stateful). Wrap in `Mutex` inside the callback struct.
-
-## Integration with service-sdk
-
-In projects using `service-sdk`, the logger is already available:
-
-```rust
-let client = WebSocketClient::new(
-    Arc::new("BinanceWs".into()),
-    app.clone(),                              // AppContext implements WsClientSettings
-    service_sdk::my_logger::LOGGER.clone(),   // shared logger
-);
-client.start(None, Arc::new(MyCallback::new(app)));
-```
-
-Implement `WsClientSettings` on `AppContext` so the URL is resolved from the application's configuration or NoSQL state.
 
 ## Re-exports
 
