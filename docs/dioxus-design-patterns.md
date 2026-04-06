@@ -453,3 +453,38 @@ fn main() {
 ```
 
 **NEVER** edit `public/assets/app.css` directly — it is auto-generated on every build and all manual changes will be lost. Always add or edit CSS in the `css/` directory. To add new styles, create a new numbered file (e.g. `07-toast.css`) and register it in `build.rs`.
+
+## 16) NEVER call `signal.write()` / `signal.set()` during render
+
+**NEVER** call `signal.write()` or `signal.set()` in the component body (outside event handler closures). This triggers a re-render → the function runs again → writes again → **infinite loop → browser hangs**.
+
+```rust
+// ❌ WRONG — write during render → infinite loop
+#[component]
+fn MyComponent() -> Element {
+    let mut chart_view = use_signal(|| ChartViewState::new(...));
+
+    // This runs on EVERY render → triggers re-render → loop
+    chart_view.write().positions = Some(new_positions);
+
+    rsx! { ... }
+}
+
+// ✅ CORRECT — compute as local variable, pass as prop
+#[component]
+fn MyComponent() -> Element {
+    let chart_view = use_signal(|| ChartViewState::new(...));
+
+    // Computed before rsx, no signal write
+    let positions = vec![PositionOverlay { ... }];
+
+    rsx! {
+        CanvasChart {
+            view: chart_view,
+            positions: Some(positions),  // passed as prop, not written to signal
+        }
+    }
+}
+```
+
+**Rule:** Only event handlers (`onclick`, `oninput`, `onkeydown`, etc.) and `spawn(async move { ... })` blocks may call `signal.write()` / `signal.set()`. The component body is for **reading** state and building the virtual DOM — never for mutating it.
