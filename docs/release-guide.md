@@ -1,3 +1,6 @@
+---
+alwaysApply: true
+---
 ## Release Guide — How to deploy services
 
 ### Single-repo (one service = one GitHub repo)

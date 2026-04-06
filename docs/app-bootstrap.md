@@ -1,3 +1,6 @@
+---
+alwaysApply: true
+---
 ## CI / GitHub Actions
 
 > **Always ask the user:** *"Should I create a CI workflow for this service?"*

@@ -5,6 +5,8 @@ alwaysApply: false
 
 This document describes how to bootstrap a new Dioxus **client-side only** web application (no server component). The app compiles to WASM and runs entirely in the browser. API calls go to a separate backend service. WebSocket connections are made directly from the browser.
 
+For component design patterns (state management, folder structure, DataState, dialogs, etc.) see **dioxus-design-patterns.md**.
+
 ## When to Use Client-Side vs Fullstack
 
 | Use case | Project type |
@@ -456,8 +458,6 @@ pub async fn send_code(email: &str) -> Result<(), RequestError> {
 }
 ```
 
-API calls are always referenced by **full path**: `crate::api::auth::send_code(...)`, never imported with `use`.
-
 ## Models
 
 One file per type. `mod.rs` uses standard `mod x; pub use x::*;` pattern.
@@ -605,7 +605,9 @@ pub fn MenuPanel() -> Element {
 }
 ```
 
-## Dialogs
+## Dialogs — initial scaffold
+
+See **dioxus-design-patterns.md** for full dialog lifecycle, DataState, state management patterns. Below is the minimal bootstrap scaffold:
 
 ```rust
 // dialogs/dialog_state.rs

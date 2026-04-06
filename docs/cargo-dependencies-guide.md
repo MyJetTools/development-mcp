@@ -1,3 +1,6 @@
+---
+alwaysApply: true
+---
 # Cargo Dependencies Guide
 
 Use this guide when adding new dependencies to `Cargo.toml`. If no crate-specific instructions exist, add the dependency in the standard way using the `flurl` entry as the template.

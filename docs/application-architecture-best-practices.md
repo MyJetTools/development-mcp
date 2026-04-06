@@ -1,3 +1,6 @@
+---
+alwaysApply: true
+---
 # Application Architecture Best Practices
 
 ## Zero Warnings Policy

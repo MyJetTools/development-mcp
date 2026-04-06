@@ -58,6 +58,9 @@ fn get_doc_url(filename: &str) -> Option<&'static str> {
         "dioxus-admin-ui-kit.md" => Some(
             "https://raw.githubusercontent.com/MyJetTools/dioxus-admin-ui-kit/refs/heads/main/README.md",
         ),
+        "dioxus-design-patterns.md" => Some(
+            "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/dioxus-design-patterns.md",
+        ),
         "application-architecture-best-practices.md" => Some(
             "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/application-architecture-best-practices.md",
         ),

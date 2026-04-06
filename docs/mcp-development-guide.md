@@ -1,3 +1,6 @@
+---
+alwaysApply: false
+---
 # MCP Middleware Guide: Creating Prompts and Tool Calls
 
 This guide explains how to create prompts and tool calls for the MCPMiddleware based on the existing codebase structure.

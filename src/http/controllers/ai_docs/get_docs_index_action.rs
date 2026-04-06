@@ -103,6 +103,11 @@ const DOCS: &[DocEntry] = &[
         description: "How to create releases and deploy services: single-repo and monorepo, gh commands, re-deploy, troubleshooting",
     },
     DocEntry {
+        filename: "dioxus-design-patterns.md",
+        name: "Dioxus Design Patterns",
+        description: "Common patterns for all Dioxus projects: naming conventions, ComponentState, signals, forms, CSS",
+    },
+    DocEntry {
         filename: "application-architecture-best-practices.md",
         name: "Application Architecture Best Practices",
         description: "Complete coding standards: project structure, flows/scripts, gRPC, Postgres, Service Bus, HTTP actions, mappers, MyNoSql, settings, logging, error handling",
