@@ -117,6 +117,11 @@ const DOCS: &[DocEntry] = &[
         name: "Application Architecture Best Practices",
         description: "Complete coding standards: project structure, flows/scripts, gRPC, Postgres, Service Bus, HTTP actions, mappers, MyNoSql, settings, logging, error handling",
     },
+    DocEntry {
+        filename: "rust-fix-readme.md",
+        name: "rust-fix FIX Protocol Library",
+        description: "Zero-dependency FIX protocol library for low-latency trading: message writer, reader, and builder",
+    },
 ];
 
 pub(super) fn build_yaml(scheme: &str, host: &str) -> String {

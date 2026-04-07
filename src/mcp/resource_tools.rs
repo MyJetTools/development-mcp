@@ -231,6 +231,14 @@ fn all_resource_tools() -> Vec<ResourceToolInfo> {
             resource_description: "UI components for Dioxus admin apps: typed inputs, table rendering, enum selectors".to_string(),
             mime_type: "text/markdown".to_string(),
         },
+        ResourceToolInfo {
+            func_name: "get_rust_fix_readme".to_string(),
+            tool_description: "Fetch rust-fix README resource content".to_string(),
+            resource_uri: "resource://rust-fix-readme".to_string(),
+            resource_name: "rust-fix FIX Protocol Library".to_string(),
+            resource_description: "Zero-dependency FIX protocol library for low-latency trading: message writer, reader, and builder".to_string(),
+            mime_type: "text/markdown".to_string(),
+        },
     ]
 }
 
@@ -435,4 +443,15 @@ define_resource_tool!(
     "resource://dioxus-admin-ui-kit",
     "text/markdown",
     "https://raw.githubusercontent.com/MyJetTools/dioxus-admin-ui-kit/main/README.md"
+);
+
+define_resource_tool!(
+    RustFixReadmeTool,
+    "get_rust_fix_readme",
+    "Fetch rust-fix README resource content",
+    "rust-fix FIX Protocol Library",
+    "Zero-dependency FIX protocol library for low-latency trading: message writer, reader, and builder",
+    "resource://rust-fix-readme",
+    "text/markdown",
+    "https://raw.githubusercontent.com/MyJetTools/rust-fix/refs/heads/main/readme.md"
 );
