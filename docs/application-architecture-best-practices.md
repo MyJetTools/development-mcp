@@ -244,6 +244,73 @@ pub struct AppContext {
 One struct = one module (`src/{name}/mod.rs` + `src/{name}/{name}.rs`).
 The internal container (`RwLock`, `Mutex`, `DashMap`) is **always private** — callers use methods.
 
+### Inner + Wrapper pattern (multiple related fields)
+
+When a struct has **multiple related fields** behind a lock, use the Inner+Wrapper pattern:
+
+- **Inner** — plain struct, all fields without locks. All logic via `&mut self` / `&self` — borrow checker guarantees consistency.
+- **Wrapper** — single `RwLock<Inner>` field. Methods are thin async delegates: acquire lock → call Inner method → return.
+
+> **WHY:** Separate locks per field cause race conditions between related data.
+> A single lock on Inner guarantees atomic operations across all fields.
+> Inner is testable synchronously without async runtime.
+
+```rust
+// src/order_book_subscribers/order_book_subscribers_inner.rs
+pub(super) struct OrderBookSubscribersInner {
+    subscriptions: HashMap<String, HashSet<i64>>,
+    connection_instrument: HashMap<i64, String>,
+}
+
+impl OrderBookSubscribersInner {
+    pub(super) fn subscribe(&mut self, connection_id: i64, instrument_id: String) {
+        // All logic here — borrow checker enforces consistency
+    }
+
+    pub(super) fn unsubscribe_connection(&mut self, connection_id: i64) { ... }
+    pub(super) fn get_subscribers(&self, instrument_id: &str) -> Vec<i64> { ... }
+}
+```
+
+```rust
+// src/order_book_subscribers/order_book_subscribers.rs
+pub struct OrderBookSubscribers {
+    inner: RwLock<OrderBookSubscribersInner>,
+}
+
+impl OrderBookSubscribers {
+    pub async fn subscribe(&self, connection_id: i64, instrument_id: String) {
+        self.inner.write().await.subscribe(connection_id, instrument_id);
+    }
+
+    pub async fn get_subscribers(&self, instrument_id: &str) -> Vec<i64> {
+        self.inner.read().await.get_subscribers(instrument_id)
+    }
+}
+```
+
+```rust
+// src/order_book_subscribers/mod.rs
+mod order_book_subscribers;
+mod order_book_subscribers_inner;
+
+pub use order_book_subscribers::OrderBookSubscribers;
+```
+
+**Module structure — always a folder:**
+```
+order_book_subscribers/
+├── mod.rs                            — mod + pub use
+├── order_book_subscribers.rs         — Wrapper (pub struct)
+└── order_book_subscribers_inner.rs   — Inner (all logic)
+```
+
+**Rules:**
+- **NEVER** separate `RwLock`/`Mutex` per field — one lock for all related data
+- **One lock acquisition** per operation — no dropping and re-acquiring between related writes
+- Inner is `pub(super)` — invisible outside the module
+- Wrapper contains **zero business logic** — only concurrency management
+
 ---
 
 ## Settings Pattern
