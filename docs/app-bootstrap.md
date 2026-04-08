@@ -349,3 +349,15 @@ service_sdk::my_no_sql_sdk::core          → MyNoSqlEntity trait
 | `my-nosql-sdk` | Entity macros only. No reader, no writer. |
 | `my-nosql-data-reader-sdk` | Entity macros + TCP reader |
 | `my-nosql-data-writer-sdk` | Entity macros + HTTP writer |
+
+---
+
+## TLS Feature (required for `wss://` WebSocket connections)
+
+If the service connects to external WebSocket endpoints over `wss://` (e.g. Binance, exchange feeds), the `with-tls` feature **must** be enabled in `service-sdk`. Without it, the rustls `CryptoProvider` is not initialized and the service will panic at runtime.
+
+```toml
+service-sdk = { ..., features = ["with-tls"] }
+```
+
+**Rule:** any service that uses `my-web-socket-client` with `wss://` URLs → add `"with-tls"` to service-sdk features.

@@ -309,6 +309,17 @@ fn main() {
 **NEVER** use `tonic_build` directly — always via `ci_utils::ProtoFileBuilder`.
 Proto files live in a **shared repo** (`../proto-files/`), not in the service itself.
 
+### Monorepo build.rs
+
+In a monorepo (multiple services in one GitHub repo), **do NOT use `CiGenerator`**. Dockerfile and CI workflows are created manually per service. `build.rs` only syncs + compiles proto files:
+
+```rust
+fn main() {
+    ci_utils::ProtoFileBuilder::new("../proto-files/")
+        .sync_and_build("MyService.proto");
+}
+```
+
 ---
 
 ## gRPC Client Pattern
