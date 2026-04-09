@@ -259,6 +259,68 @@ pub fn RenderDialog() -> Element {
 
 Each dialog = its own folder (see §3). Open dialogs by setting state: `app_state.write().open_edit_tp_sl(...)`.
 
+### Dialog results — always via `EventHandler`
+
+Dialogs **never** mutate external state or call APIs directly. A dialog collects user input and passes the result back through an `EventHandler<T>` prop. The parent component (or `RenderDialog` router) owns the action logic:
+
+```rust
+// ✅ CORRECT — dialog just returns data
+#[component]
+fn EditTpSlDialog(
+    order: EditTpSl,
+    instrument_name: String,
+    accuracy: usize,
+    on_submit: EventHandler<TpSlSubmitData>,
+) -> Element {
+    // ... form inputs, validation ...
+    // Save button:
+    onclick: move |_| {
+        let w = cs.read();
+        let data = TpSlSubmitData {
+            tp_str: w.tp_price.clone(),
+            sl_str: w.sl_price.clone(),
+            open_price_str: w.open_price_str.clone(),
+        };
+        drop(w);
+        on_submit.call(data);
+    },
+}
+
+// Parent — action function handles API + state:
+fn on_tp_sl_submit(mut app_state: Signal<AppState>, order: EditTpSl, data: TpSlSubmitData) {
+    spawn(async move {
+        let result = crate::api::trading::set_tp_sl(...).await;
+        match result {
+            Ok(resp) => { app_state.write().update_tp_sl(...); app_state.write().close_dialog(); }
+            Err(err) => { show_toast(err.message, ToastType::Error); }
+        }
+    });
+}
+
+// Wiring in RenderDialog:
+rsx! {
+    EditTpSlDialog {
+        order, instrument_name, accuracy,
+        on_submit: move |data: TpSlSubmitData| {
+            on_tp_sl_submit(app_state, order_clone.clone(), data);
+        },
+    }
+}
+```
+
+```rust
+// ❌ WRONG — dialog calls API and mutates state
+#[component]
+fn EditTpSlDialog(...) -> Element {
+    let mut app_state = consume_context::<Signal<AppState>>();
+    // onclick:
+    spawn(async move {
+        crate::api::trading::set_tp_sl(...).await;  // not dialog's job
+        app_state.write().update_tp_sl(...);         // not dialog's job
+    });
+}
+```
+
 ### `dialog_template` — standard wrapper for all dialogs
 
 All dialogs use `dialog_template` instead of inlining modal HTML. Cancel button and close (x) are **built into** the template — never add them manually:
@@ -488,3 +550,27 @@ fn MyComponent() -> Element {
 ```
 
 **Rule:** Only event handlers (`onclick`, `oninput`, `onkeydown`, etc.) and `spawn(async move { ... })` blocks may call `signal.write()` / `signal.set()`. The component body is for **reading** state and building the virtual DOM — never for mutating it.
+
+## 17) Single state access per operation
+
+Open a signal once — read/write everything needed — drop. Never open the same signal multiple times in sequence:
+
+```rust
+// ✅ CORRECT — one read, extract all fields
+let ra = cs.read();
+let data = SubmitData {
+    tp_str: ra.tp_price.clone(),
+    sl_str: ra.sl_price.clone(),
+    open_price_str: ra.open_price_str.clone(),
+};
+drop(ra);
+
+// ❌ WRONG — three separate reads
+let data = SubmitData {
+    tp_str: cs.read().tp_price.clone(),
+    sl_str: cs.read().sl_price.clone(),
+    open_price_str: cs.read().open_price_str.clone(),
+};
+```
+
+Same applies to writes — batch mutations in one `.write()` or use a state method (see §7).
