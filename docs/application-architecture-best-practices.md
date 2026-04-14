@@ -83,6 +83,61 @@ pub struct ChartState {
 
 ---
 
+## Match Exhaustiveness — No `_ => {}` on Enums
+
+**NEVER** use `_ => {}` (or `_ => ...` wildcard) when matching on an **enum**.
+Always enumerate every variant explicitly.
+
+> **WHY:** A wildcard arm silently swallows variants that don't exist yet. The moment someone adds a new variant to the enum, every `match` with `_ =>` compiles without warning and the new case is ignored at runtime — a whole class of bugs where a message / state / event is dropped on the floor with no trace. Listing every variant forces the compiler to flag every site that must be updated.
+
+```rust
+pub enum OrderEvent {
+    Placed,
+    Filled,
+    Cancelled,
+}
+
+// ❌ WRONG — adding `Rejected` tomorrow compiles silently
+match event {
+    OrderEvent::Placed => handle_placed(),
+    OrderEvent::Filled => handle_filled(),
+    _ => {}
+}
+
+// ✅ CORRECT — compiler forces every call-site to handle the new variant
+match event {
+    OrderEvent::Placed    => handle_placed(),
+    OrderEvent::Filled    => handle_filled(),
+    OrderEvent::Cancelled => {}
+}
+```
+
+**When genuinely stuck** — you've tried at least two approaches (e.g. grouping variants with `|`, an explicit `ignore_remaining!` helper, pulling the ignored set into a method on the enum) and still cannot express the intent without a wildcard — **stop and ask the user** before adding `_ =>`. A wildcard on an enum should be a deliberate, discussed exception, never a default.
+
+**Wildcard is fine on open domains.** `&str`, numeric types, bytes, any unknown external tag — the value space is infinite by definition, so a catch-all is required:
+
+```rust
+// ✅ Storage key parser — unknown keys are forward-compat noise, skip them
+match key {
+    "renderer"     => renderer = value.to_string(),
+    "candle_type"  => candle_type = value.to_string(),
+    _ => {}
+}
+
+// ✅ WebSocket msg_id — unknown ids from future server versions
+match msg_id {
+    "bid_ask"     => BidAsk::parse(payload),
+    "instruments" => Instruments::parse(payload),
+    _ => Unknown(msg_id.to_string()),
+}
+```
+
+**Also fine:**
+- Matching on `#[non_exhaustive]` enums from external crates — the compiler requires a wildcard; add one with a clear `// _ => {} // non_exhaustive upstream` comment.
+- Matching on `Result<T, E>` where `E` is erased / boxed — use `Ok(_) | Err(_)` style rather than `_ =>`.
+
+---
+
 ## Logging Levels
 
 Use `my_logger::LOGGER` with the correct level. Choosing the wrong level is a bug.
