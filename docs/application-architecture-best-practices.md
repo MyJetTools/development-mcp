@@ -38,6 +38,51 @@ fn do_something(params: DoSomethingParams) {}
 
 ---
 
+## Named Structs Over Multi-Field Tuples
+
+**NEVER** use multi-field tuples (`(T, T)`, `(T, T, T, T)`) in public APIs — struct fields, function signatures, return types.
+**ALWAYS** introduce a named struct with self-documenting field names.
+
+> **WHY:** Positional unpacking `(a, b) = foo()` forces the reader to remember the order and meaning. `Option<(f64, f64)>` could be a point, a range, a pair of before/after values — the name is lost. Named fields (`ScreenPoint { x, y }`, `YRange { min, max }`, `ScreenRect { x, y, w, h }`) document themselves at every use site.
+
+```rust
+// ❌ WRONG — readers must remember the tuple order
+pub fn draw_crosshair(mouse: (f64, f64)) -> (Option<(f64, f64)>, Option<f64>) { ... }
+
+pub struct ChartState {
+    pub quick_order_btn_bounds: Option<(f64, f64, f64, f64)>,
+    pub y_range_override: Option<(f64, f64)>,
+}
+
+// ✅ CORRECT — named structs, intent is obvious
+pub struct ScreenPoint { pub x: f64, pub y: f64 }
+pub struct ScreenRect  { pub x: f64, pub y: f64, pub w: f64, pub h: f64 }
+pub struct YRange      { pub min: f64, pub max: f64 }
+
+pub struct CrosshairLabels {
+    pub ohlc: Option<ScreenPoint>,
+    pub date_label_x: Option<f64>,
+}
+
+pub fn draw_crosshair(mouse: ScreenPoint) -> CrosshairLabels { ... }
+
+pub struct ChartState {
+    pub quick_order_btn_bounds: Option<ScreenRect>,
+    pub y_range_override: Option<YRange>,
+}
+```
+
+**Reuse across modules:** when the same shape appears in several places (points, rects, ranges), lift the struct into a shared module (e.g. `types.rs` / `geom.rs`) rather than redefining per-caller.
+
+**Exceptions — tuples are fine for:**
+- Local destructuring: `let (start, end, shift) = compute_slice(...);` inside one function.
+- Standard-library / ecosystem pairs: `HashMap::iter() -> (K, V)`, `Result<T, E>`, `Option<(T, U)>` from a zip/split helper.
+- Single-purpose internal helpers where the tuple never escapes the function.
+
+**When refactoring:** introduce the struct, update the signature, let the compiler drive every call-site migration — each conversion becomes `SomeStruct { field_a: x, field_b: y }` which is self-documenting at the usage site too.
+
+---
+
 ## Logging Levels
 
 Use `my_logger::LOGGER` with the correct level. Choosing the wrong level is a bug.
