@@ -122,6 +122,11 @@ const DOCS: &[DocEntry] = &[
         name: "rust-fix FIX Protocol Library",
         description: "Zero-dependency FIX protocol library for low-latency trading: message writer, reader, and builder",
     },
+    DocEntry {
+        filename: "performance-considerations.md",
+        name: "Performance Considerations",
+        description: "Default performance principles: ArcSwap for read-mostly state, parking_lot vs tokio locks, AHash, no heavy work under locks, Arc-based snapshots, bounded async parallelism",
+    },
 ];
 
 pub(super) fn build_yaml(scheme: &str, host: &str) -> String {

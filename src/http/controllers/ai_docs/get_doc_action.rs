@@ -70,6 +70,9 @@ fn get_doc_url(filename: &str) -> Option<&'static str> {
         "release-guide.md" => Some(
             "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/release-guide.md",
         ),
+        "performance-considerations.md" => Some(
+            "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/performance-considerations.md",
+        ),
         _ => None,
     }
 }
