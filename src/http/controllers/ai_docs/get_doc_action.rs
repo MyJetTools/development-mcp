@@ -73,6 +73,9 @@ fn get_doc_url(filename: &str) -> Option<&'static str> {
         "performance-considerations.md" => Some(
             "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/performance-considerations.md",
         ),
+        "my-ai-agent-readme.md" => Some(
+            "https://raw.githubusercontent.com/my-ai-utils/my-ai-agent/refs/heads/main/README.md",
+        ),
         _ => None,
     }
 }

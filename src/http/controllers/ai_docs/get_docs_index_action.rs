@@ -127,6 +127,11 @@ const DOCS: &[DocEntry] = &[
         name: "Performance Considerations",
         description: "Default performance principles: ArcSwap for read-mostly state, parking_lot vs tokio locks, AHash, no heavy work under locks, Arc-based snapshots, bounded async parallelism",
     },
+    DocEntry {
+        filename: "my-ai-agent-readme.md",
+        name: "my-ai-agent",
+        description: "Rust toolkit for building AI agents: chat completions, local and remote tool execution, streaming, multi-vendor LLM support (OpenAI, Nebius, Z.ai, Fireworks, Cerebras)",
+    },
 ];
 
 pub(super) fn build_yaml(scheme: &str, host: &str) -> String {
