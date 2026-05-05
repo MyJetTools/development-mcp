@@ -310,7 +310,7 @@ define_resource_tool!(
     "Step-by-step instructions for bootstrapping a new project",
     "resource://app-bootstrap",
     "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/service-sdk/refs/heads/main/APP_BOOTSTRAP.md"
+    "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/app-bootstrap.md"
 );
 
 define_resource_tool!(
