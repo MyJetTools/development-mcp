@@ -10,7 +10,7 @@ pub async fn start(app: &Arc<AppContext>) {
     let mut http_server = MyHttpServer::new(SocketAddr::from(([0, 0, 0, 0], 8000)));
 
     let mut mcp = McpMiddleware::new(
-        "/",
+        "/mcp",
         crate::app::APP_NAME,
         crate::app::APP_VERSION,
         "Provides access to devops tools",
