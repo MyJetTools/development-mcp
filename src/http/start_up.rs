@@ -13,7 +13,11 @@ pub async fn start(app: &Arc<AppContext>) {
         "/mcp",
         crate::app::APP_NAME,
         crate::app::APP_VERSION,
-        "Provides access to devops tools",
+        "Provides access to devops tools. The exposed prompts contain different development \
+         best practices (library usage, project bootstrap, design patterns, coding conventions). \
+         Keep these development best practices in mind and load the relevant prompts on demand \
+         whenever the current task touches the area they cover — do not rely on memory or \
+         guesswork for MyJetTools APIs and patterns.",
     );
 
     mcp.register_resource(Arc::new(McpResource)).await;
