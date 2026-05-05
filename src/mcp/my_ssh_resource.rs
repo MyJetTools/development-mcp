@@ -3,6 +3,13 @@ use mcp_server_middleware::*;
 
 pub struct MySshResource;
 
+impl MySshResource {
+    pub const URL: &'static str =
+        "https://raw.githubusercontent.com/MyJetTools/my-ssh/main/README.md";
+    pub const TOOL_FN: &'static str = "get_my_ssh_readme";
+    pub const TOOL_DESCRIPTION: &'static str = "Fetch my-ssh README resource content";
+}
+
 impl ResourceDefinition for MySshResource {
     const RESOURCE_URI: &'static str = "resource://my-ssh-readme";
     const RESOURCE_NAME: &'static str = "Ssh connections design library";
@@ -14,9 +21,6 @@ impl ResourceDefinition for MySshResource {
 #[async_trait::async_trait]
 impl McpResourceService for MySshResource {
     async fn read_resource(&self) -> Result<ResourceReadResult, String> {
-        const README_URL: &str =
-            "https://raw.githubusercontent.com/MyJetTools/my-ssh/main/README.md";
-
-        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, README_URL).await
+        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, Self::URL).await
     }
 }

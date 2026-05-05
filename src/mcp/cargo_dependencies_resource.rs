@@ -3,6 +3,13 @@ use mcp_server_middleware::*;
 
 pub struct CargoDependenciesResource;
 
+impl CargoDependenciesResource {
+    pub const URL: &'static str =
+        "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/cargo-dependencies-guide.md";
+    pub const TOOL_FN: &'static str = "get_cargo_dependencies_guide";
+    pub const TOOL_DESCRIPTION: &'static str = "Fetch Cargo dependencies guide resource content";
+}
+
 impl ResourceDefinition for CargoDependenciesResource {
     const RESOURCE_URI: &'static str = "resource://cargo-dependencies-guide";
     const RESOURCE_NAME: &'static str = "Cargo Dependencies Guide";
@@ -13,8 +20,6 @@ impl ResourceDefinition for CargoDependenciesResource {
 #[async_trait::async_trait]
 impl McpResourceService for CargoDependenciesResource {
     async fn read_resource(&self) -> Result<ResourceReadResult, String> {
-        const GUIDE_URL: &str = "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/cargo-dependencies-guide.md";
-
-        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, GUIDE_URL).await
+        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, Self::URL).await
     }
 }

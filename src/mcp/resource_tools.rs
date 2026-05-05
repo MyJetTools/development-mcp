@@ -1,5 +1,6 @@
 use crate::app::AppContext;
 use crate::mcp::scripts::load_resource_by_http;
+use crate::mcp::*;
 use mcp_server_middleware::*;
 use my_ai_agent::{macros::*, *};
 use serde::{Deserialize, Serialize};
@@ -72,173 +73,79 @@ async fn fetch_resource_text(
     })
 }
 
+/// Defines an MCP tool wrapper around a resource type. Pulls every piece of
+/// metadata (URL, function name, descriptions, URI, MIME) from constants on
+/// the resource type itself so there is exactly one source of truth per
+/// resource.
 macro_rules! define_resource_tool {
-    ($name:ident, $func:expr, $tool_desc:expr, $resource_name:expr, $resource_desc:expr, $uri:expr, $mime:expr, $url:expr) => {
-        pub struct $name {
+    ($tool:ident, $res:ty) => {
+        pub struct $tool {
             _app: Arc<AppContext>,
         }
 
-        impl $name {
+        impl $tool {
             pub fn new(app: Arc<AppContext>) -> Self {
                 Self { _app: app }
             }
         }
 
-        impl ToolDefinition for $name {
-            const FUNC_NAME: &'static str = $func;
-            const DESCRIPTION: &'static str = $tool_desc;
+        impl ToolDefinition for $tool {
+            const FUNC_NAME: &'static str = <$res>::TOOL_FN;
+            const DESCRIPTION: &'static str = <$res>::TOOL_DESCRIPTION;
         }
 
         #[async_trait::async_trait]
-        impl McpToolCall<EmptyToolInput, ResourceToolResponse> for $name {
+        impl McpToolCall<EmptyToolInput, ResourceToolResponse> for $tool {
             async fn execute_tool_call(
                 &self,
                 _model: EmptyToolInput,
             ) -> Result<ResourceToolResponse, String> {
-                fetch_resource_text($uri, $resource_name, $resource_desc, $mime, $url).await
+                fetch_resource_text(
+                    <$res as ResourceDefinition>::RESOURCE_URI,
+                    <$res as ResourceDefinition>::RESOURCE_NAME,
+                    <$res as ResourceDefinition>::DESCRIPTION,
+                    <$res as ResourceDefinition>::MIME_TYPE,
+                    <$res>::URL,
+                )
+                .await
             }
+        }
+    };
+}
+
+/// Builds a `ResourceToolInfo` directly from a resource type's constants.
+macro_rules! tool_info {
+    ($res:ty) => {
+        ResourceToolInfo {
+            func_name: <$res>::TOOL_FN.to_string(),
+            tool_description: <$res>::TOOL_DESCRIPTION.to_string(),
+            resource_uri: <$res as ResourceDefinition>::RESOURCE_URI.to_string(),
+            resource_name: <$res as ResourceDefinition>::RESOURCE_NAME.to_string(),
+            resource_description: <$res as ResourceDefinition>::DESCRIPTION.to_string(),
+            mime_type: <$res as ResourceDefinition>::MIME_TYPE.to_string(),
         }
     };
 }
 
 fn all_resource_tools() -> Vec<ResourceToolInfo> {
     vec![
-        ResourceToolInfo {
-            func_name: "get_mcp_development_guide".to_string(),
-            tool_description: "Fetch MCP development guide resource content".to_string(),
-            resource_uri: "resource://mcp-development-guide".to_string(),
-            resource_name: "MCP Development Guide".to_string(),
-            resource_description: "Guide for creating Prompts and Tool Calls".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_flurl_usage_guide".to_string(),
-            tool_description: "Fetch FlUrl usage guide resource content".to_string(),
-            resource_uri: "resource://flurl-usage-guide".to_string(),
-            resource_name: "FlUrl Usage Guide".to_string(),
-            resource_description: "How to use FlUrl library".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_http_actions_design_guide".to_string(),
-            tool_description: "Fetch HTTP actions design guide resource content".to_string(),
-            resource_uri: "resource://http-actions-design-guide".to_string(),
-            resource_name: "HTTP Actions Design Guide".to_string(),
-            resource_description: "Guide for HTTP action architecture and patterns".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_app_bootstrap_guide".to_string(),
-            tool_description: "Fetch app bootstrap guide resource content".to_string(),
-            resource_uri: "resource://app-bootstrap".to_string(),
-            resource_name: "App Bootstrap Guide".to_string(),
-            resource_description: "Step-by-step instructions for bootstrapping a new project".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_dioxus_bootstrap_guide".to_string(),
-            tool_description: "Fetch Dioxus bootstrap guide resource content".to_string(),
-            resource_uri: "resource://dioxus-bootstrap".to_string(),
-            resource_name: "Dioxus Fullstack Bootstrap Guide".to_string(),
-            resource_description: "Step-by-step instructions for bootstrapping a new empty Dioxus fullstack web application".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_cargo_dependencies_guide".to_string(),
-            tool_description: "Fetch Cargo dependencies guide resource content".to_string(),
-            resource_uri: "resource://cargo-dependencies-guide".to_string(),
-            resource_name: "Cargo Dependencies Guide".to_string(),
-            resource_description: "How to add dependencies to Cargo.toml".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_my_ssh_readme".to_string(),
-            tool_description: "Fetch my-ssh README resource content".to_string(),
-            resource_uri: "resource://my-ssh-readme".to_string(),
-            resource_name: "Ssh connections design library".to_string(),
-            resource_description: "Async SSH helpers for commands, file transfer, and port forwarding.".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_my_tcp_sockets_readme".to_string(),
-            tool_description: "Fetch my-tcp-sockets README resource content".to_string(),
-            resource_uri: "resource://tcp-sockets-design-library".to_string(),
-            resource_name: "TcpSockets design library".to_string(),
-            resource_description: "Async TCP server/client building blocks with ping/pong and TLS options".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_rust_extensions_readme".to_string(),
-            tool_description: "Fetch rust-extensions README resource content".to_string(),
-            resource_uri: "resource://rust-extensions".to_string(),
-            resource_name: "rust-extensions for each project".to_string(),
-            resource_description: "Low-level utils, queues and other helpers to glue together Rust code".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_dioxus_fullstack_design_patterns".to_string(),
-            tool_description: "Fetch Dioxus fullstack design patterns resource content".to_string(),
-            resource_uri: "resource://dioxus-fullstack-design-patterns".to_string(),
-            resource_name: "Dioxus Fullstack Design Patterns".to_string(),
-            resource_description: "Project playbook for dialogs, forms, lists, and server functions".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_my_no_sql_entity_patterns".to_string(),
-            tool_description: "Fetch MyNoSql entity design patterns resource content".to_string(),
-            resource_uri: "resource://my-no-sql-entity-design-patterns".to_string(),
-            resource_name: "MyNoSql Entity Design Patterns".to_string(),
-            resource_description: "Design patterns for MyNoSql entities and enums".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_my_grpc_extensions_readme".to_string(),
-            tool_description: "Fetch my-grpc-extensions README resource content".to_string(),
-            resource_uri: "resource://my-grpc-extensions.md".to_string(),
-            resource_name: "Grpc extensions".to_string(),
-            resource_description: "Utilities and macros for building gRPC clients and servers".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_dioxus_utils_readme".to_string(),
-            tool_description: "Fetch dioxus-utils README resource content".to_string(),
-            resource_uri: "resource://dioxus-utils-readme".to_string(),
-            resource_name: "dioxus-utils Usage Cases Guide".to_string(),
-            resource_description: "Utilities for Dioxus apps: data state, dialogs, JS helpers".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_ci_utils_readme".to_string(),
-            tool_description: "Fetch ci-utils README resource content".to_string(),
-            resource_uri: "resource://ci-utils-readme".to_string(),
-            resource_name: "ci-utils for each project".to_string(),
-            resource_description: "Utility crate for build-time helpers".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_my_postgres_readme".to_string(),
-            tool_description: "Fetch my-postgres README resource content".to_string(),
-            resource_uri: "resource://my-postgres-readme".to_string(),
-            resource_name: "Postgres Design Library".to_string(),
-            resource_description: "Documentation for my-postgres library".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_dioxus_admin_ui_kit".to_string(),
-            tool_description: "Fetch Dioxus Admin UI Kit README resource content".to_string(),
-            resource_uri: "resource://dioxus-admin-ui-kit".to_string(),
-            resource_name: "Dioxus Admin UI Kit".to_string(),
-            resource_description: "UI components for Dioxus admin apps: typed inputs, table rendering, enum selectors".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
-        ResourceToolInfo {
-            func_name: "get_rust_fix_readme".to_string(),
-            tool_description: "Fetch rust-fix README resource content".to_string(),
-            resource_uri: "resource://rust-fix-readme".to_string(),
-            resource_name: "rust-fix FIX Protocol Library".to_string(),
-            resource_description: "Zero-dependency FIX protocol library for low-latency trading: message writer, reader, and builder".to_string(),
-            mime_type: "text/markdown".to_string(),
-        },
+        tool_info!(McpResource),
+        tool_info!(FlUrlResource),
+        tool_info!(HttpActionsResource),
+        tool_info!(AppBootstrapResource),
+        tool_info!(DioxusBootstrapResource),
+        tool_info!(CargoDependenciesResource),
+        tool_info!(MySshResource),
+        tool_info!(MyTcpSocketsResource),
+        tool_info!(RustExtensionsResource),
+        tool_info!(DioxusFullstackPatternsResource),
+        tool_info!(MyNoSqlEntityPatternsResource),
+        tool_info!(MyGrpcExtensionsResource),
+        tool_info!(DioxusUtilsResource),
+        tool_info!(CiUtilsResource),
+        tool_info!(MyPostgresResource),
+        tool_info!(DioxusAdminUiKitResource),
+        tool_info!(RustFixResource),
     ]
 }
 
@@ -269,189 +176,20 @@ impl McpToolCall<EmptyToolInput, ResourceToolListResponse> for ListResourceTools
     }
 }
 
-define_resource_tool!(
-    McpDevelopmentGuideTool,
-    "get_mcp_development_guide",
-    "Fetch MCP development guide resource content",
-    "MCP Development Guide",
-    "Guide for creating Prompts and Tool Calls",
-    "resource://mcp-development-guide",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/mcp-development-guide.md"
-);
-
-define_resource_tool!(
-    FlUrlUsageGuideTool,
-    "get_flurl_usage_guide",
-    "Fetch FlUrl usage guide resource content",
-    "FlUrl Usage Guide",
-    "How to use FlUrl library",
-    "resource://flurl-usage-guide",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/fl-url/refs/heads/main/README.md"
-);
-
-define_resource_tool!(
-    HttpActionsDesignGuideTool,
-    "get_http_actions_design_guide",
-    "Fetch HTTP actions design guide resource content",
-    "HTTP Actions Design Guide",
-    "Guide for HTTP action architecture and patterns",
-    "resource://http-actions-design-guide",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/my-http-server/refs/heads/main/HTTP_ACTIONS_DESIGN.md"
-);
-
-define_resource_tool!(
-    AppBootstrapGuideTool,
-    "get_app_bootstrap_guide",
-    "Fetch app bootstrap guide resource content",
-    "App Bootstrap Guide",
-    "Step-by-step instructions for bootstrapping a new project",
-    "resource://app-bootstrap",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/app-bootstrap.md"
-);
-
-define_resource_tool!(
-    DioxusBootstrapGuideTool,
-    "get_dioxus_bootstrap_guide",
-    "Fetch Dioxus bootstrap guide resource content",
-    "Dioxus Fullstack Bootstrap Guide",
-    "Step-by-step instructions for bootstrapping a new empty Dioxus fullstack web application",
-    "resource://dioxus-bootstrap",
-    "text/markdown",
-    "https://raw.githubusercontent.com/amigin/ai-templates/refs/heads/main/cursor/bootstrap-empty-dioxus-fullstack-project.mdc"
-);
-
-define_resource_tool!(
-    CargoDependenciesGuideTool,
-    "get_cargo_dependencies_guide",
-    "Fetch Cargo dependencies guide resource content",
-    "Cargo Dependencies Guide",
-    "How to add dependencies to Cargo.toml",
-    "resource://cargo-dependencies-guide",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/cargo-dependencies-guide.md"
-);
-
-define_resource_tool!(
-    MySshReadmeTool,
-    "get_my_ssh_readme",
-    "Fetch my-ssh README resource content",
-    "Ssh connections design library",
-    "Async SSH helpers for commands, file transfer, and port forwarding.",
-    "resource://my-ssh-readme",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/my-ssh/main/README.md"
-);
-
-define_resource_tool!(
-    MyTcpSocketsReadmeTool,
-    "get_my_tcp_sockets_readme",
-    "Fetch my-tcp-sockets README resource content",
-    "TcpSockets design library",
-    "Async TCP server/client building blocks with ping/pong and TLS options",
-    "resource://tcp-sockets-design-library",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/my-tcp-sockets/refs/heads/main/README.md"
-);
-
-define_resource_tool!(
-    RustExtensionsReadmeTool,
-    "get_rust_extensions_readme",
-    "Fetch rust-extensions README resource content",
-    "rust-extensions for each project",
-    "Low-level utils, queues and other helpers to glue together Rust code",
-    "resource://rust-extensions",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/rust-extensions/main/README.md"
-);
-
-define_resource_tool!(
-    DioxusFullstackPatternsTool,
-    "get_dioxus_fullstack_design_patterns",
-    "Fetch Dioxus fullstack design patterns resource content",
-    "Dioxus Fullstack Design Patterns",
-    "Project playbook for dialogs, forms, lists, and server functions",
-    "resource://dioxus-fullstack-design-patterns",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/development-mcp/main/docs/DIOXUS_FULLSTACK_DESIGN_PATTERS.md"
-);
-
-define_resource_tool!(
-    MyNoSqlEntityPatternsTool,
-    "get_my_no_sql_entity_patterns",
-    "Fetch MyNoSql entity design patterns resource content",
-    "MyNoSql Entity Design Patterns",
-    "Design patterns for MyNoSql entities and enums",
-    "resource://my-no-sql-entity-design-patterns",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/my-no-sql-sdk/refs/heads/main/MY_NO_SQL_ENTITY_DESIGN_PATTERNS.md"
-);
-
-define_resource_tool!(
-    MyGrpcExtensionsReadmeTool,
-    "get_my_grpc_extensions_readme",
-    "Fetch my-grpc-extensions README resource content",
-    "Grpc extensions",
-    "Utilities and macros for building gRPC clients and servers",
-    "resource://my-grpc-extensions.md",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/my-grpc-extensions/main/README.md"
-);
-
-define_resource_tool!(
-    DioxusUtilsReadmeTool,
-    "get_dioxus_utils_readme",
-    "Fetch dioxus-utils README resource content",
-    "dioxus-utils Usage Cases Guide",
-    "Utilities for Dioxus apps: data state, dialogs, JS helpers",
-    "resource://dioxus-utils-readme",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/dioxus-utils/refs/heads/main/README.md"
-);
-
-define_resource_tool!(
-    CiUtilsReadmeTool,
-    "get_ci_utils_readme",
-    "Fetch ci-utils README resource content",
-    "ci-utils for each project",
-    "Utility crate for build-time helpers",
-    "resource://ci-utils-readme",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/ci-utils/refs/heads/main/README.md"
-);
-
-define_resource_tool!(
-    MyPostgresReadmeTool,
-    "get_my_postgres_readme",
-    "Fetch my-postgres README resource content",
-    "Postgres Design Library",
-    "Documentation for my-postgres library",
-    "resource://my-postgres-readme",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/my-postgres/refs/heads/main/README.md"
-);
-
-define_resource_tool!(
-    DioxusAdminUiKitTool,
-    "get_dioxus_admin_ui_kit",
-    "Fetch Dioxus Admin UI Kit README resource content",
-    "Dioxus Admin UI Kit",
-    "UI components for Dioxus admin apps: typed inputs, table rendering, enum selectors",
-    "resource://dioxus-admin-ui-kit",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/dioxus-admin-ui-kit/main/README.md"
-);
-
-define_resource_tool!(
-    RustFixReadmeTool,
-    "get_rust_fix_readme",
-    "Fetch rust-fix README resource content",
-    "rust-fix FIX Protocol Library",
-    "Zero-dependency FIX protocol library for low-latency trading: message writer, reader, and builder",
-    "resource://rust-fix-readme",
-    "text/markdown",
-    "https://raw.githubusercontent.com/MyJetTools/rust-fix/refs/heads/main/readme.md"
-);
+define_resource_tool!(McpDevelopmentGuideTool, McpResource);
+define_resource_tool!(FlUrlUsageGuideTool, FlUrlResource);
+define_resource_tool!(HttpActionsDesignGuideTool, HttpActionsResource);
+define_resource_tool!(AppBootstrapGuideTool, AppBootstrapResource);
+define_resource_tool!(DioxusBootstrapGuideTool, DioxusBootstrapResource);
+define_resource_tool!(CargoDependenciesGuideTool, CargoDependenciesResource);
+define_resource_tool!(MySshReadmeTool, MySshResource);
+define_resource_tool!(MyTcpSocketsReadmeTool, MyTcpSocketsResource);
+define_resource_tool!(RustExtensionsReadmeTool, RustExtensionsResource);
+define_resource_tool!(DioxusFullstackPatternsTool, DioxusFullstackPatternsResource);
+define_resource_tool!(MyNoSqlEntityPatternsTool, MyNoSqlEntityPatternsResource);
+define_resource_tool!(MyGrpcExtensionsReadmeTool, MyGrpcExtensionsResource);
+define_resource_tool!(DioxusUtilsReadmeTool, DioxusUtilsResource);
+define_resource_tool!(CiUtilsReadmeTool, CiUtilsResource);
+define_resource_tool!(MyPostgresReadmeTool, MyPostgresResource);
+define_resource_tool!(DioxusAdminUiKitTool, DioxusAdminUiKitResource);
+define_resource_tool!(RustFixReadmeTool, RustFixResource);

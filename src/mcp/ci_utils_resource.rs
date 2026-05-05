@@ -3,6 +3,13 @@ use mcp_server_middleware::*;
 
 pub struct CiUtilsResource;
 
+impl CiUtilsResource {
+    pub const URL: &'static str =
+        "https://raw.githubusercontent.com/MyJetTools/ci-utils/refs/heads/main/README.md";
+    pub const TOOL_FN: &'static str = "get_ci_utils_readme";
+    pub const TOOL_DESCRIPTION: &'static str = "Fetch ci-utils README resource content";
+}
+
 impl ResourceDefinition for CiUtilsResource {
     const RESOURCE_URI: &'static str = "resource://ci-utils-readme";
     const RESOURCE_NAME: &'static str = "ci-utils for each project";
@@ -13,9 +20,6 @@ impl ResourceDefinition for CiUtilsResource {
 #[async_trait::async_trait]
 impl McpResourceService for CiUtilsResource {
     async fn read_resource(&self) -> Result<ResourceReadResult, String> {
-        const README_URL: &str =
-            "https://raw.githubusercontent.com/MyJetTools/ci-utils/refs/heads/main/README.md";
-
-        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, README_URL).await
+        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, Self::URL).await
     }
 }

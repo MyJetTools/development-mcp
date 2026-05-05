@@ -3,6 +3,13 @@ use mcp_server_middleware::*;
 
 pub struct FlUrlResource;
 
+impl FlUrlResource {
+    pub const URL: &'static str =
+        "https://raw.githubusercontent.com/MyJetTools/fl-url/refs/heads/main/README.md";
+    pub const TOOL_FN: &'static str = "get_flurl_usage_guide";
+    pub const TOOL_DESCRIPTION: &'static str = "Fetch FlUrl usage guide resource content";
+}
+
 impl ResourceDefinition for FlUrlResource {
     const RESOURCE_URI: &'static str = "resource://flurl-usage-guide";
     const RESOURCE_NAME: &'static str = "FlUrl Usage Guide";
@@ -13,9 +20,6 @@ impl ResourceDefinition for FlUrlResource {
 #[async_trait::async_trait]
 impl McpResourceService for FlUrlResource {
     async fn read_resource(&self) -> Result<ResourceReadResult, String> {
-        const README_URL: &str =
-            "https://raw.githubusercontent.com/MyJetTools/fl-url/refs/heads/main/README.md";
-
-        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, README_URL).await
+        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, Self::URL).await
     }
 }

@@ -3,6 +3,13 @@ use mcp_server_middleware::*;
 
 pub struct MyPostgresResource;
 
+impl MyPostgresResource {
+    pub const URL: &'static str =
+        "https://raw.githubusercontent.com/MyJetTools/my-postgres/refs/heads/main/README.md";
+    pub const TOOL_FN: &'static str = "get_my_postgres_readme";
+    pub const TOOL_DESCRIPTION: &'static str = "Fetch my-postgres README resource content";
+}
+
 impl ResourceDefinition for MyPostgresResource {
     const RESOURCE_URI: &'static str = "resource://my-postgres-readme";
     const RESOURCE_NAME: &'static str = "Postgres Design Library";
@@ -13,9 +20,6 @@ impl ResourceDefinition for MyPostgresResource {
 #[async_trait::async_trait]
 impl McpResourceService for MyPostgresResource {
     async fn read_resource(&self) -> Result<ResourceReadResult, String> {
-        const README_URL: &str =
-            "https://raw.githubusercontent.com/MyJetTools/my-postgres/refs/heads/main/README.md";
-
-        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, README_URL).await
+        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, Self::URL).await
     }
 }

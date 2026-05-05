@@ -3,6 +3,13 @@ use mcp_server_middleware::*;
 
 pub struct MyNoSqlEntityPatternsResource;
 
+impl MyNoSqlEntityPatternsResource {
+    pub const URL: &'static str = "https://raw.githubusercontent.com/MyJetTools/my-no-sql-sdk/refs/heads/main/MY_NO_SQL_ENTITY_DESIGN_PATTERNS.md";
+    pub const TOOL_FN: &'static str = "get_my_no_sql_entity_patterns";
+    pub const TOOL_DESCRIPTION: &'static str =
+        "Fetch MyNoSql entity design patterns resource content";
+}
+
 impl ResourceDefinition for MyNoSqlEntityPatternsResource {
     const RESOURCE_URI: &'static str = "resource://my-no-sql-entity-design-patterns";
     const RESOURCE_NAME: &'static str = "MyNoSql Entity Design Patterns";
@@ -13,8 +20,6 @@ impl ResourceDefinition for MyNoSqlEntityPatternsResource {
 #[async_trait::async_trait]
 impl McpResourceService for MyNoSqlEntityPatternsResource {
     async fn read_resource(&self) -> Result<ResourceReadResult, String> {
-        const README_URL: &str = "https://raw.githubusercontent.com/MyJetTools/my-no-sql-sdk/refs/heads/main/MY_NO_SQL_ENTITY_DESIGN_PATTERNS.md";
-
-        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, README_URL).await
+        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, Self::URL).await
     }
 }

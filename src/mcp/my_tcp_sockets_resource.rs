@@ -3,6 +3,13 @@ use mcp_server_middleware::*;
 
 pub struct MyTcpSocketsResource;
 
+impl MyTcpSocketsResource {
+    pub const URL: &'static str =
+        "https://raw.githubusercontent.com/MyJetTools/my-tcp-sockets/refs/heads/main/README.md";
+    pub const TOOL_FN: &'static str = "get_my_tcp_sockets_readme";
+    pub const TOOL_DESCRIPTION: &'static str = "Fetch my-tcp-sockets README resource content";
+}
+
 impl ResourceDefinition for MyTcpSocketsResource {
     const RESOURCE_URI: &'static str = "resource://tcp-sockets-design-library";
     const RESOURCE_NAME: &'static str = "TcpSockets design library";
@@ -14,9 +21,6 @@ impl ResourceDefinition for MyTcpSocketsResource {
 #[async_trait::async_trait]
 impl McpResourceService for MyTcpSocketsResource {
     async fn read_resource(&self) -> Result<ResourceReadResult, String> {
-        const README_URL: &str =
-            "https://raw.githubusercontent.com/MyJetTools/my-tcp-sockets/refs/heads/main/README.md";
-
-        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, README_URL).await
+        load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, Self::URL).await
     }
 }
