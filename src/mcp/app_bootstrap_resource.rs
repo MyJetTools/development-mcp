@@ -14,7 +14,7 @@ impl ResourceDefinition for AppBootstrapResource {
 impl McpResourceService for AppBootstrapResource {
     async fn read_resource(&self) -> Result<ResourceReadResult, String> {
         const BOOTSTRAP_URL: &str =
-            "https://raw.githubusercontent.com/MyJetTools/service-sdk/refs/heads/main/APP_BOOTSTRAP.md";
+            "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/app-bootstrap.md";
 
         load_resource_by_http(Self::RESOURCE_URI, Self::MIME_TYPE, BOOTSTRAP_URL).await
     }

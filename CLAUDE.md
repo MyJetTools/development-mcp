@@ -2,10 +2,10 @@
 
 ## MCP Resources — MANDATORY
 
-Before writing any code, you MUST fetch the resource index from:
+Before writing any code, you MUST list the available resource tools by calling:
 
 ```
-https://jetdev.eu/ai-docs.yaml
+mcp__claude_ai_development__list_resource_tools
 ```
 
-Read the YAML, identify which documents are relevant to your task, and fetch them before proceeding. Never rely on memory for API signatures or patterns — always read fresh documentation.
+Identify which resources are relevant to your task, then call the matching `mcp__claude_ai_development__get_*` tool(s) to read them before proceeding. Never rely on memory for API signatures or patterns — always read fresh documentation.
