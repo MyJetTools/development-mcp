@@ -35,3 +35,5 @@ mod dioxus_admin_ui_kit_resource;
 pub use dioxus_admin_ui_kit_resource::*;
 mod rust_fix_resource;
 pub use rust_fix_resource::*;
+mod architect_skill_resource;
+pub use architect_skill_resource::*;

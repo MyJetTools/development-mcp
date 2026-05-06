@@ -146,6 +146,7 @@ fn all_resource_tools() -> Vec<ResourceToolInfo> {
         tool_info!(MyPostgresResource),
         tool_info!(DioxusAdminUiKitResource),
         tool_info!(RustFixResource),
+        tool_info!(ArchitectSkillResource),
     ]
 }
 
@@ -193,3 +194,4 @@ define_resource_tool!(CiUtilsReadmeTool, CiUtilsResource);
 define_resource_tool!(MyPostgresReadmeTool, MyPostgresResource);
 define_resource_tool!(DioxusAdminUiKitTool, DioxusAdminUiKitResource);
 define_resource_tool!(RustFixReadmeTool, RustFixResource);
+define_resource_tool!(ArchitectPlaybookTool, ArchitectSkillResource);

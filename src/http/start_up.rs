@@ -43,6 +43,7 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(MyPostgresResource)).await;
     mcp.register_resource(Arc::new(DioxusAdminUiKitResource)).await;
     mcp.register_resource(Arc::new(RustFixResource)).await;
+    mcp.register_resource(Arc::new(ArchitectSkillResource)).await;
 
     mcp.register_tool_call(Arc::new(McpDevelopmentGuideTool::new(app.clone())))
         .await;
@@ -77,6 +78,8 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(DioxusAdminUiKitTool::new(app.clone())))
         .await;
     mcp.register_tool_call(Arc::new(RustFixReadmeTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(ArchitectPlaybookTool::new(app.clone())))
         .await;
     mcp.register_tool_call(Arc::new(ListResourceToolsTool::new(app.clone())))
         .await;
