@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct ArchitectSkillResource;
 
 impl ArchitectSkillResource {
+    pub const FILENAME: &'static str = "architect-playbook.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/architect-playbook.md";
     pub const TOOL_FN: &'static str = "get_architect_playbook";

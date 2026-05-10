@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct HttpActionsResource;
 
 impl HttpActionsResource {
+    pub const FILENAME: &'static str = "http-actions-design-guide.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/my-http-server/refs/heads/main/HTTP_ACTIONS_DESIGN.md";
     pub const TOOL_FN: &'static str = "get_http_actions_design_guide";

@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct DioxusUtilsResource;
 
 impl DioxusUtilsResource {
+    pub const FILENAME: &'static str = "dioxus-utils-readme.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/dioxus-utils/refs/heads/main/README.md";
     pub const TOOL_FN: &'static str = "get_dioxus_utils_readme";

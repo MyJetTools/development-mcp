@@ -32,6 +32,8 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(MyTcpSocketsResource)).await;
     mcp.register_resource(Arc::new(RustExtensionsResource))
         .await;
+    mcp.register_resource(Arc::new(DioxusDesignPatternsResource))
+        .await;
     mcp.register_resource(Arc::new(DioxusFullstackPatternsResource))
         .await;
     mcp.register_resource(Arc::new(MyNoSqlEntityPatternsResource))
@@ -44,6 +46,16 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(DioxusAdminUiKitResource)).await;
     mcp.register_resource(Arc::new(RustFixResource)).await;
     mcp.register_resource(Arc::new(ArchitectSkillResource)).await;
+    mcp.register_resource(Arc::new(DioxusClientSideBootstrapResource))
+        .await;
+    mcp.register_resource(Arc::new(MyWebSocketClientResource))
+        .await;
+    mcp.register_resource(Arc::new(ReleaseGuideResource)).await;
+    mcp.register_resource(Arc::new(ApplicationArchitectureResource))
+        .await;
+    mcp.register_resource(Arc::new(PerformanceConsiderationsResource))
+        .await;
+    mcp.register_resource(Arc::new(MyAiAgentResource)).await;
 
     mcp.register_tool_call(Arc::new(McpDevelopmentGuideTool::new(app.clone())))
         .await;
@@ -63,6 +75,8 @@ pub async fn start(app: &Arc<AppContext>) {
         .await;
     mcp.register_tool_call(Arc::new(RustExtensionsReadmeTool::new(app.clone())))
         .await;
+    mcp.register_tool_call(Arc::new(DioxusDesignPatternsTool::new(app.clone())))
+        .await;
     mcp.register_tool_call(Arc::new(DioxusFullstackPatternsTool::new(app.clone())))
         .await;
     mcp.register_tool_call(Arc::new(MyNoSqlEntityPatternsTool::new(app.clone())))
@@ -80,6 +94,18 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(RustFixReadmeTool::new(app.clone())))
         .await;
     mcp.register_tool_call(Arc::new(ArchitectPlaybookTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(DioxusClientSideBootstrapTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(MyWebSocketClientTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(ReleaseGuideTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(ApplicationArchitectureTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(PerformanceConsiderationsTool::new(app.clone())))
+        .await;
+    mcp.register_tool_call(Arc::new(MyAiAgentTool::new(app.clone())))
         .await;
     mcp.register_tool_call(Arc::new(ListResourceToolsTool::new(app.clone())))
         .await;

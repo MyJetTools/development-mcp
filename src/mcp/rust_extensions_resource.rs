@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct RustExtensionsResource;
 
 impl RustExtensionsResource {
+    pub const FILENAME: &'static str = "rust-extensions.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/rust-extensions/main/README.md";
     pub const TOOL_FN: &'static str = "get_rust_extensions_readme";

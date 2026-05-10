@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct MySshResource;
 
 impl MySshResource {
+    pub const FILENAME: &'static str = "my-ssh-readme.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/my-ssh/main/README.md";
     pub const TOOL_FN: &'static str = "get_my_ssh_readme";

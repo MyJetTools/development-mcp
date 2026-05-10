@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct DioxusAdminUiKitResource;
 
 impl DioxusAdminUiKitResource {
+    pub const FILENAME: &'static str = "dioxus-admin-ui-kit.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/dioxus-admin-ui-kit/main/README.md";
     pub const TOOL_FN: &'static str = "get_dioxus_admin_ui_kit";

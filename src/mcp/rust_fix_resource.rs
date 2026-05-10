@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct RustFixResource;
 
 impl RustFixResource {
+    pub const FILENAME: &'static str = "rust-fix-readme.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/rust-fix/refs/heads/main/readme.md";
     pub const TOOL_FN: &'static str = "get_rust_fix_readme";

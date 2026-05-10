@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct MyPostgresResource;
 
 impl MyPostgresResource {
+    pub const FILENAME: &'static str = "my-postgres-readme.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/my-postgres/refs/heads/main/README.md";
     pub const TOOL_FN: &'static str = "get_my_postgres_readme";

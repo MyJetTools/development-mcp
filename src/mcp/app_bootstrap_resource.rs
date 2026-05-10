@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct AppBootstrapResource;
 
 impl AppBootstrapResource {
+    pub const FILENAME: &'static str = "app-bootstrap.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/app-bootstrap.md";
     pub const TOOL_FN: &'static str = "get_app_bootstrap_guide";

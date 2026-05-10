@@ -127,6 +127,63 @@ macro_rules! tool_info {
     };
 }
 
+/// Shared catalog entry used both for MCP listing and the HTTP `/ai-docs` index.
+/// Built from the same resource-type constants so there is one source of truth.
+pub struct DocCatalogEntry {
+    pub filename: &'static str,
+    pub name: &'static str,
+    pub description: &'static str,
+    pub url: &'static str,
+}
+
+macro_rules! doc_entry {
+    ($res:ty) => {
+        DocCatalogEntry {
+            filename: <$res>::FILENAME,
+            name: <$res as ResourceDefinition>::RESOURCE_NAME,
+            description: <$res as ResourceDefinition>::DESCRIPTION,
+            url: <$res>::URL,
+        }
+    };
+}
+
+pub fn all_doc_entries() -> Vec<DocCatalogEntry> {
+    vec![
+        doc_entry!(McpResource),
+        doc_entry!(FlUrlResource),
+        doc_entry!(HttpActionsResource),
+        doc_entry!(AppBootstrapResource),
+        doc_entry!(DioxusBootstrapResource),
+        doc_entry!(CargoDependenciesResource),
+        doc_entry!(MySshResource),
+        doc_entry!(MyTcpSocketsResource),
+        doc_entry!(RustExtensionsResource),
+        doc_entry!(DioxusDesignPatternsResource),
+        doc_entry!(DioxusFullstackPatternsResource),
+        doc_entry!(MyNoSqlEntityPatternsResource),
+        doc_entry!(MyGrpcExtensionsResource),
+        doc_entry!(DioxusUtilsResource),
+        doc_entry!(CiUtilsResource),
+        doc_entry!(MyPostgresResource),
+        doc_entry!(DioxusAdminUiKitResource),
+        doc_entry!(RustFixResource),
+        doc_entry!(ArchitectSkillResource),
+        doc_entry!(DioxusClientSideBootstrapResource),
+        doc_entry!(MyWebSocketClientResource),
+        doc_entry!(ReleaseGuideResource),
+        doc_entry!(ApplicationArchitectureResource),
+        doc_entry!(PerformanceConsiderationsResource),
+        doc_entry!(MyAiAgentResource),
+    ]
+}
+
+pub fn get_doc_url_by_filename(filename: &str) -> Option<&'static str> {
+    all_doc_entries()
+        .into_iter()
+        .find(|e| e.filename == filename)
+        .map(|e| e.url)
+}
+
 fn all_resource_tools() -> Vec<ResourceToolInfo> {
     vec![
         tool_info!(McpResource),
@@ -138,6 +195,7 @@ fn all_resource_tools() -> Vec<ResourceToolInfo> {
         tool_info!(MySshResource),
         tool_info!(MyTcpSocketsResource),
         tool_info!(RustExtensionsResource),
+        tool_info!(DioxusDesignPatternsResource),
         tool_info!(DioxusFullstackPatternsResource),
         tool_info!(MyNoSqlEntityPatternsResource),
         tool_info!(MyGrpcExtensionsResource),
@@ -147,6 +205,12 @@ fn all_resource_tools() -> Vec<ResourceToolInfo> {
         tool_info!(DioxusAdminUiKitResource),
         tool_info!(RustFixResource),
         tool_info!(ArchitectSkillResource),
+        tool_info!(DioxusClientSideBootstrapResource),
+        tool_info!(MyWebSocketClientResource),
+        tool_info!(ReleaseGuideResource),
+        tool_info!(ApplicationArchitectureResource),
+        tool_info!(PerformanceConsiderationsResource),
+        tool_info!(MyAiAgentResource),
     ]
 }
 
@@ -186,6 +250,7 @@ define_resource_tool!(CargoDependenciesGuideTool, CargoDependenciesResource);
 define_resource_tool!(MySshReadmeTool, MySshResource);
 define_resource_tool!(MyTcpSocketsReadmeTool, MyTcpSocketsResource);
 define_resource_tool!(RustExtensionsReadmeTool, RustExtensionsResource);
+define_resource_tool!(DioxusDesignPatternsTool, DioxusDesignPatternsResource);
 define_resource_tool!(DioxusFullstackPatternsTool, DioxusFullstackPatternsResource);
 define_resource_tool!(MyNoSqlEntityPatternsTool, MyNoSqlEntityPatternsResource);
 define_resource_tool!(MyGrpcExtensionsReadmeTool, MyGrpcExtensionsResource);
@@ -195,3 +260,18 @@ define_resource_tool!(MyPostgresReadmeTool, MyPostgresResource);
 define_resource_tool!(DioxusAdminUiKitTool, DioxusAdminUiKitResource);
 define_resource_tool!(RustFixReadmeTool, RustFixResource);
 define_resource_tool!(ArchitectPlaybookTool, ArchitectSkillResource);
+define_resource_tool!(
+    DioxusClientSideBootstrapTool,
+    DioxusClientSideBootstrapResource
+);
+define_resource_tool!(MyWebSocketClientTool, MyWebSocketClientResource);
+define_resource_tool!(ReleaseGuideTool, ReleaseGuideResource);
+define_resource_tool!(
+    ApplicationArchitectureTool,
+    ApplicationArchitectureResource
+);
+define_resource_tool!(
+    PerformanceConsiderationsTool,
+    PerformanceConsiderationsResource
+);
+define_resource_tool!(MyAiAgentTool, MyAiAgentResource);

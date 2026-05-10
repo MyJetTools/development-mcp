@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct CargoDependenciesResource;
 
 impl CargoDependenciesResource {
+    pub const FILENAME: &'static str = "cargo-dependencies-guide.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/cargo-dependencies-guide.md";
     pub const TOOL_FN: &'static str = "get_cargo_dependencies_guide";

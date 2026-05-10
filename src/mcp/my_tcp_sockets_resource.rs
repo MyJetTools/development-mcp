@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct MyTcpSocketsResource;
 
 impl MyTcpSocketsResource {
+    pub const FILENAME: &'static str = "my-tcp-sockets-readme.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/my-tcp-sockets/refs/heads/main/README.md";
     pub const TOOL_FN: &'static str = "get_my_tcp_sockets_readme";

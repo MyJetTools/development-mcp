@@ -4,7 +4,8 @@ use mcp_server_middleware::*;
 pub struct DioxusFullstackPatternsResource;
 
 impl DioxusFullstackPatternsResource {
-    pub const URL: &'static str = "https://raw.githubusercontent.com/MyJetTools/development-mcp/main/docs/DIOXUS_FULLSTACK_DESIGN_PATTERS.md";
+    pub const FILENAME: &'static str = "dioxus-fullstack-design-patterns.md";
+    pub const URL: &'static str = "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/DIOXUS_FULLSTACK_DESIGN_PATTERS.md";
     pub const TOOL_FN: &'static str = "get_dioxus_fullstack_design_patterns";
     pub const TOOL_DESCRIPTION: &'static str =
         "Fetch Dioxus fullstack design patterns resource content";

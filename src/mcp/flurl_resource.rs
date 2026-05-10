@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct FlUrlResource;
 
 impl FlUrlResource {
+    pub const FILENAME: &'static str = "flurl-usage-guide.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/fl-url/refs/heads/main/README.md";
     pub const TOOL_FN: &'static str = "get_flurl_usage_guide";

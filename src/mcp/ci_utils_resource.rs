@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct CiUtilsResource;
 
 impl CiUtilsResource {
+    pub const FILENAME: &'static str = "ci-utils-readme.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/ci-utils/refs/heads/main/README.md";
     pub const TOOL_FN: &'static str = "get_ci_utils_readme";

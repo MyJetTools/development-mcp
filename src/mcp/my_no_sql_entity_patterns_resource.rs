@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct MyNoSqlEntityPatternsResource;
 
 impl MyNoSqlEntityPatternsResource {
+    pub const FILENAME: &'static str = "my-no-sql-entity-design-patterns.md";
     pub const URL: &'static str = "https://raw.githubusercontent.com/MyJetTools/my-no-sql-sdk/refs/heads/main/MY_NO_SQL_ENTITY_DESIGN_PATTERNS.md";
     pub const TOOL_FN: &'static str = "get_my_no_sql_entity_patterns";
     pub const TOOL_DESCRIPTION: &'static str =

@@ -4,6 +4,7 @@ use mcp_server_middleware::*;
 pub struct DioxusBootstrapResource;
 
 impl DioxusBootstrapResource {
+    pub const FILENAME: &'static str = "dioxus-bootstrap.md";
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/amigin/ai-templates/refs/heads/main/cursor/bootstrap-empty-dioxus-fullstack-project.mdc";
     pub const TOOL_FN: &'static str = "get_dioxus_bootstrap_guide";

@@ -4,139 +4,11 @@ use my_http_server::macros::*;
 use my_http_server::*;
 
 use crate::app::AppContext;
-
-struct DocEntry {
-    filename: &'static str,
-    name: &'static str,
-    description: &'static str,
-}
-
-const DOCS: &[DocEntry] = &[
-    DocEntry {
-        filename: "app-bootstrap.md",
-        name: "App Bootstrap Guide",
-        description: "Step-by-step instructions for bootstrapping a new project using service-sdk: settings, AppContext, gRPC, HTTP, Service Bus, MyNoSql reader/writer",
-    },
-    DocEntry {
-        filename: "cargo-dependencies-guide.md",
-        name: "Cargo Dependencies Guide",
-        description: "How to add dependencies to Cargo.toml",
-    },
-    DocEntry {
-        filename: "mcp-development-guide.md",
-        name: "MCP Development Guide",
-        description: "Guide for creating MCP resources and Tool Calls",
-    },
-    DocEntry {
-        filename: "http-actions-design-guide.md",
-        name: "HTTP Actions Design Guide",
-        description: "HTTP action architecture and patterns for my-http-server",
-    },
-    DocEntry {
-        filename: "flurl-usage-guide.md",
-        name: "FlUrl Usage Guide",
-        description: "How to use the FlUrl HTTP client library",
-    },
-    DocEntry {
-        filename: "dioxus-bootstrap.md",
-        name: "Dioxus Fullstack Bootstrap Guide",
-        description: "Bootstrap a new empty Dioxus fullstack web application",
-    },
-    DocEntry {
-        filename: "dioxus-client-side-bootstrap.md",
-        name: "Dioxus Client-Side Bootstrap Guide",
-        description: "Bootstrap a new Dioxus client-side (WASM-only) web application with WebSocket and API calls",
-    },
-    DocEntry {
-        filename: "dioxus-fullstack-design-patterns.md",
-        name: "Dioxus Fullstack Design Patterns",
-        description: "Playbook for dialogs, forms, lists, and server functions",
-    },
-    DocEntry {
-        filename: "dioxus-utils-readme.md",
-        name: "dioxus-utils Usage Cases Guide",
-        description: "Utilities for Dioxus apps: data state, dialogs, JS helpers",
-    },
-    DocEntry {
-        filename: "dioxus-admin-ui-kit.md",
-        name: "Dioxus Admin UI Kit",
-        description: "Ready-made UI components for Dioxus admin panels",
-    },
-    DocEntry {
-        filename: "my-postgres-readme.md",
-        name: "Postgres Design Library",
-        description: "Documentation for my-postgres library",
-    },
-    DocEntry {
-        filename: "my-no-sql-entity-design-patterns.md",
-        name: "MyNoSql Entity Design Patterns",
-        description: "Design patterns for MyNoSql entities and enums",
-    },
-    DocEntry {
-        filename: "my-grpc-extensions.md",
-        name: "gRPC extensions",
-        description: "Utilities and macros for building gRPC clients and servers",
-    },
-    DocEntry {
-        filename: "my-ssh-readme.md",
-        name: "SSH connections design library",
-        description: "Async SSH helpers for commands, file transfer, and port forwarding",
-    },
-    DocEntry {
-        filename: "my-tcp-sockets-readme.md",
-        name: "TcpSockets design library",
-        description: "Async TCP server/client building blocks with ping/pong and TLS options",
-    },
-    DocEntry {
-        filename: "my-web-socket-client-guide.md",
-        name: "WebSocket Client Guide",
-        description: "WebSocket client for non-WASM apps: auto-reconnect, heartbeat, callbacks, compression",
-    },
-    DocEntry {
-        filename: "rust-extensions.md",
-        name: "rust-extensions",
-        description: "Low-level utils, queues and other helpers",
-    },
-    DocEntry {
-        filename: "ci-utils-readme.md",
-        name: "ci-utils",
-        description: "Build-time helper crate",
-    },
-    DocEntry {
-        filename: "release-guide.md",
-        name: "Release Guide",
-        description: "How to create releases and deploy services: single-repo and monorepo, gh commands, re-deploy, troubleshooting",
-    },
-    DocEntry {
-        filename: "dioxus-design-patterns.md",
-        name: "Dioxus Design Patterns",
-        description: "Common patterns for all Dioxus projects: naming conventions, ComponentState, signals, forms, CSS",
-    },
-    DocEntry {
-        filename: "application-architecture-best-practices.md",
-        name: "Application Architecture Best Practices",
-        description: "Complete coding standards: project structure, flows/scripts, gRPC, Postgres, Service Bus, HTTP actions, mappers, MyNoSql, settings, logging, error handling",
-    },
-    DocEntry {
-        filename: "rust-fix-readme.md",
-        name: "rust-fix FIX Protocol Library",
-        description: "Zero-dependency FIX protocol library for low-latency trading: message writer, reader, and builder",
-    },
-    DocEntry {
-        filename: "performance-considerations.md",
-        name: "Performance Considerations",
-        description: "Default performance principles: ArcSwap for read-mostly state, parking_lot vs tokio locks, AHash, no heavy work under locks, Arc-based snapshots, bounded async parallelism",
-    },
-    DocEntry {
-        filename: "my-ai-agent-readme.md",
-        name: "my-ai-agent",
-        description: "Rust toolkit for building AI agents: chat completions, local and remote tool execution, streaming, multi-vendor LLM support (OpenAI, Nebius, Z.ai, Fireworks, Cerebras)",
-    },
-];
+use crate::mcp::all_doc_entries;
 
 pub(super) fn build_yaml(scheme: &str, host: &str) -> String {
     let mut yaml = String::from("resources:\n");
-    for doc in DOCS {
+    for doc in all_doc_entries() {
         yaml.push_str(&format!(
             "  - url: \"{}://{}/ai-docs/{}\"\n    name: \"{}\"\n    description: \"{}\"\n",
             scheme, host, doc.filename, doc.name, doc.description
@@ -147,7 +19,7 @@ pub(super) fn build_yaml(scheme: &str, host: &str) -> String {
 
 fn build_html() -> String {
     let mut rows = String::new();
-    for doc in DOCS {
+    for doc in all_doc_entries() {
         rows.push_str(&format!(
             r#"<tr>
           <td><a href="/ai-docs/{filename}">{filename}</a></td>
