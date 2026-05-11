@@ -51,3 +51,5 @@ mod performance_considerations_resource;
 pub use performance_considerations_resource::*;
 mod my_ai_agent_resource;
 pub use my_ai_agent_resource::*;
+mod single_vm_unix_socket_resource;
+pub use single_vm_unix_socket_resource::*;

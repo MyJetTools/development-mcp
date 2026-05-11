@@ -173,6 +173,7 @@ pub fn all_doc_entries() -> Vec<DocCatalogEntry> {
         doc_entry!(ApplicationArchitectureResource),
         doc_entry!(PerformanceConsiderationsResource),
         doc_entry!(MyAiAgentResource),
+        doc_entry!(SingleVmUnixSocketResource),
     ]
 }
 
@@ -210,6 +211,7 @@ fn all_resource_tools() -> Vec<ResourceToolInfo> {
         tool_info!(ApplicationArchitectureResource),
         tool_info!(PerformanceConsiderationsResource),
         tool_info!(MyAiAgentResource),
+        tool_info!(SingleVmUnixSocketResource),
     ]
 }
 
@@ -274,3 +276,4 @@ define_resource_tool!(
     PerformanceConsiderationsResource
 );
 define_resource_tool!(MyAiAgentTool, MyAiAgentResource);
+define_resource_tool!(SingleVmUnixSocketTool, SingleVmUnixSocketResource);

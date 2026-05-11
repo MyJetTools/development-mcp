@@ -71,6 +71,7 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(ApplicationArchitectureTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(PerformanceConsiderationsTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(MyAiAgentTool::new(app.clone())));
+    mcp.register_tool_call(Arc::new(SingleVmUnixSocketTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(ListResourceToolsTool::new(app.clone())));
 
     let controllers = Arc::new(super::builder::build_controllers(app));
