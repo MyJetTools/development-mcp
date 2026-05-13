@@ -174,6 +174,7 @@ pub fn all_doc_entries() -> Vec<DocCatalogEntry> {
         doc_entry!(PerformanceConsiderationsResource),
         doc_entry!(MyAiAgentResource),
         doc_entry!(SingleVmUnixSocketResource),
+        doc_entry!(MyJsonResource),
     ]
 }
 
@@ -212,6 +213,7 @@ fn all_resource_tools() -> Vec<ResourceToolInfo> {
         tool_info!(PerformanceConsiderationsResource),
         tool_info!(MyAiAgentResource),
         tool_info!(SingleVmUnixSocketResource),
+        tool_info!(MyJsonResource),
     ]
 }
 
@@ -277,3 +279,4 @@ define_resource_tool!(
 );
 define_resource_tool!(MyAiAgentTool, MyAiAgentResource);
 define_resource_tool!(SingleVmUnixSocketTool, SingleVmUnixSocketResource);
+define_resource_tool!(MyJsonReadmeTool, MyJsonResource);

@@ -45,6 +45,8 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(ApplicationArchitectureResource));
     mcp.register_resource(Arc::new(PerformanceConsiderationsResource));
     mcp.register_resource(Arc::new(MyAiAgentResource));
+    mcp.register_resource(Arc::new(SingleVmUnixSocketResource));
+    mcp.register_resource(Arc::new(MyJsonResource));
 
     mcp.register_tool_call(Arc::new(McpDevelopmentGuideTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(FlUrlUsageGuideTool::new(app.clone())));
@@ -72,6 +74,7 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(PerformanceConsiderationsTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(MyAiAgentTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(SingleVmUnixSocketTool::new(app.clone())));
+    mcp.register_tool_call(Arc::new(MyJsonReadmeTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(ListResourceToolsTool::new(app.clone())));
 
     let controllers = Arc::new(super::builder::build_controllers(app));
