@@ -704,6 +704,8 @@ where the business answer is "already exists or not".
 
 **NEVER:** raw `insert_db_entity` for regular writes — no duplicate protection on retries.
 
+> Both `insert_or_update_db_entity` and `bulk_insert_or_update_db_entity` take `UpdateConflictType` as the **second positional argument**. The standard value is `UpdateConflictType::OnPrimaryKeyConstraint(PK_NAME.into())`. Import the type: `use service_sdk::my_postgres::UpdateConflictType;`.
+
 ### Update Pattern — Read → Modify → Write
 
 ```rust
@@ -717,7 +719,12 @@ entity.status = NewStatus;
 entity.updated_at = DateTimeAsMicroseconds::now();
 self.postgres
     .with_retries(3, Duration::from_secs(1))
-    .insert_or_update_db_entity(TABLE_NAME, &entity, Some(ctx))
+    .insert_or_update_db_entity(
+        TABLE_NAME,
+        UpdateConflictType::OnPrimaryKeyConstraint(PK_NAME.into()),
+        &entity,
+        Some(ctx),
+    )
     .await
     .expect("entities: insert_or_update_db_entity failed");
 
@@ -726,7 +733,12 @@ self.postgres
 
 // ❌ WRONG — no retries on write
 self.postgres
-    .insert_or_update_db_entity(TABLE_NAME, &entity, Some(ctx))
+    .insert_or_update_db_entity(
+        TABLE_NAME,
+        UpdateConflictType::OnPrimaryKeyConstraint(PK_NAME.into()),
+        &entity,
+        Some(ctx),
+    )
     .await
     .expect("...");
 ```
@@ -744,7 +756,12 @@ self.postgres
 // ✅ CORRECT — write
 self.postgres
     .with_retries(3, Duration::from_secs(1))
-    .insert_or_update_db_entity(TABLE_NAME, &entity, Some(ctx))
+    .insert_or_update_db_entity(
+        TABLE_NAME,
+        UpdateConflictType::OnPrimaryKeyConstraint(PK_NAME.into()),
+        &entity,
+        Some(ctx),
+    )
     .await
     .expect("chats: insert_or_update_db_entity upsert failed");
 
@@ -785,7 +802,12 @@ self.postgres
 // ✅ CORRECT — write with retries + telemetry
 self.postgres
     .with_retries(3, Duration::from_secs(1))
-    .insert_or_update_db_entity(TABLE_NAME, &entity, Some(ctx))
+    .insert_or_update_db_entity(
+        TABLE_NAME,
+        UpdateConflictType::OnPrimaryKeyConstraint(PK_NAME.into()),
+        &entity,
+        Some(ctx),
+    )
     .await
     .expect("likes: insert_or_update_db_entity upsert failed");
 
@@ -796,7 +818,12 @@ let result = self.postgres.query_single_row(...).await?;
 let result = self.postgres.query_single_row(...).await.unwrap_or_default();
 
 // ❌ WRONG — no retries on write
-self.postgres.insert_or_update_db_entity(TABLE_NAME, &entity, Some(ctx)).await.expect("...");
+self.postgres.insert_or_update_db_entity(
+    TABLE_NAME,
+    UpdateConflictType::OnPrimaryKeyConstraint(PK_NAME.into()),
+    &entity,
+    Some(ctx),
+).await.expect("...");
 ```
 
 **NEVER** return `Result` from repo methods — only `.expect()`.
@@ -1136,20 +1163,28 @@ impl SubscriberCallback<LikeUnlikeSbContract> for LikesSbSubscriber {
 ```rust
 let app = Arc::new(AppContext::new(settings_reader, &service_context).await);
 
-// Register AFTER app is created, BEFORE start_application
-service_context
-    .register_sb_subscribe(
-        Arc::new(LikesSbSubscriber::new(app.clone())),
-        TopicQueueType::DeleteOnDisconnect,
-    )
-    .await;
+// Register AFTER app is created, BEFORE start_application.
+//
+// `register_sb_subscribe` is SYNCHRONOUS (returns `&Self`, not a future) and takes
+// three positional arguments: (callback, delete_on_no_subscribers: bool, single_connection: bool).
+// There is no `TopicQueueType` argument despite the old enum still existing internally
+// in `my-service-bus-abstractions`.
+service_context.register_sb_subscribe(
+    Arc::new(LikesSbSubscriber::new(app.clone())),
+    /* delete_on_no_subscribers */ true,
+    /* single_connection         */ false,
+);
 
 service_context.start_application().await;
 ```
 
-### TopicQueueType — when to use which:
-- `DeleteOnDisconnect` — queue is deleted on disconnect. For events where only freshness matters (presence, notifications)
-- `PermanentWithSingleConnection` — queue is persistent. For critical events that must not be lost
+### Queue semantics — pick the right (delete_on_no_subscribers, single_connection) pair:
+
+| Intent | Flags | Old enum equivalent |
+|---|---|---|
+| Queue deleted when no subscribers — for events where only freshness matters (presence, notifications) | `(true, false)` | `DeleteOnDisconnect` |
+| Queue persistent, multi-connection | `(false, false)` | `Permanent` |
+| Queue persistent, exclusive connection — for critical events that must not be lost on a reconnect | `(false, true)` | `PermanentWithSingleConnection` |
 
 ### Rules:
 - `next_message.engage_telemetry().await` — ALWAYS before calling scripts/flows

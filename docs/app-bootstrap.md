@@ -143,6 +143,42 @@ jobs:
 
 ---
 
+## `service-sdk` feature flags
+
+`service-sdk` exposes the following Cargo features. Pick the smallest set the service actually needs.
+
+| Feature | What it enables |
+|---|---|
+| `default` | HTTP server, settings reader, logger, telemetry — the baseline every service needs. **Do not opt out.** |
+| `full` | Everything below. Convenient for prototyping, avoid in production crates. |
+| `macros` | Brings in the `use_settings!()`, `use_grpc_server!()`, `use_grpc_client!()`, `use_my_postgres!()`, `use_my_http_server!()`, `use_my_no_sql_entity!()` macros. **Almost always needed.** |
+| `grpc` | gRPC server + client stack. |
+| `my-service-bus` | SB publisher / subscriber. |
+| `postgres` | `my-postgres` re-exports + `PostgresSettings` trait auto-impl via `SdkSettingsTraits`. |
+| `my-nosql-data-reader-sdk` | TCP reader for MyNoSql. |
+| `my-nosql-data-writer-sdk` | HTTP writer for MyNoSql. |
+| `my-nosql-sdk` | Entity macros only (no reader, no writer). |
+| `websockets` | Server-side WebSocket on top of the HTTP server. |
+| `http-static-files` | Mount a static-files directory through the HTTP server. |
+| `signal-r` | SignalR server (uncommon). |
+| `with-tls` | Required to make `wss://` outbound connections work — initialises the rustls crypto provider at startup. |
+| `with-ssh` | SSH tunnel support for Postgres / other TCP clients. |
+| `rustls` | Lower-level TLS plumbing (usually pulled in transitively by `with-tls`). |
+
+### Common gotcha
+
+There is **no `http-server` feature**. The HTTP server is part of `default`. A typical REST-only service should be:
+
+```toml
+service-sdk = { tag = "0.4.2", git = "https://github.com/MyJetTools/service-sdk.git", features = [
+    "macros",
+] }
+```
+
+Add `postgres`, `my-service-bus`, `my-nosql-data-reader-sdk`, etc. as needed. The HTTP server is already wired in by `default`.
+
+---
+
 ## MyNoSql Reader (add only when the service needs to read from MyNoSql)
 
 ### service-sdk feature
