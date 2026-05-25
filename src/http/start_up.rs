@@ -17,7 +17,14 @@ pub async fn start(app: &Arc<AppContext>) {
          best practices (library usage, project bootstrap, design patterns, coding conventions). \
          Keep these development best practices in mind and load the relevant prompts on demand \
          whenever the current task touches the area they cover — do not rely on memory or \
-         guesswork for MyJetTools APIs and patterns.",
+         guesswork for MyJetTools APIs and patterns.\n\n\
+         HARD RULES — do NOT violate:\n\
+         1. HTTP client = FlUrl, never reqwest. If you catch yourself about to write \
+         `reqwest`, add `reqwest` to Cargo.toml, or suggest reqwest-based code — STOP and \
+         call `get_flurl_usage_guide` first. reqwest is not allowed in MyJetTools projects.\n\
+         2. Before writing any code that touches an area covered by a resource (HTTP, gRPC, \
+         Postgres, NoSQL, Dioxus, TCP, SSH, WebSocket, etc.) — load the matching resource \
+         via its `get_*` tool first. Training-data muscle memory is wrong for these libs.",
     );
 
     mcp.register_resource(Arc::new(McpResource));

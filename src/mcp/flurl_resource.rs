@@ -8,13 +8,13 @@ impl FlUrlResource {
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/fl-url/refs/heads/main/README.md";
     pub const TOOL_FN: &'static str = "get_flurl_usage_guide";
-    pub const TOOL_DESCRIPTION: &'static str = "Fetch FlUrl usage guide resource content";
+    pub const TOOL_DESCRIPTION: &'static str = "Fetch the FlUrl usage guide. MANDATORY prerequisite before writing any HTTP request code in MyJetTools projects — FlUrl is the only allowed HTTP client (no reqwest).";
 }
 
 impl ResourceDefinition for FlUrlResource {
     const RESOURCE_URI: &'static str = "resource://flurl-usage-guide";
     const RESOURCE_NAME: &'static str = "FlUrl Usage Guide";
-    const DESCRIPTION: &'static str = "How to use FlUrl library";
+    const DESCRIPTION: &'static str = "MANDATORY HTTP client for MyJetTools projects. Load this BEFORE writing any HTTP/REST code. reqwest is NOT allowed — use FlUrl instead.";
     const MIME_TYPE: &'static str = "text/markdown";
 }
 
