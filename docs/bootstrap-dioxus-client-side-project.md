@@ -15,7 +15,7 @@ For component design patterns (state management, folder structure, DataState, di
 | Trading terminal, SPA calling external API | **Client-side** (`dioxus/web`) |
 | Static site with no server functions | **Client-side** (`dioxus/web`) |
 
-Key difference: client-side project has **no `#[server]` functions**, no `server` feature, no `src/server/` module. All data comes from HTTP API calls (`reqwest`) or WebSocket (`reqwasm`).
+Key difference: client-side project has **no `#[server]` functions**, no `server` feature, no `src/server/` module. All data comes from HTTP API calls (`flurl`) or WebSocket (`reqwasm`).
 
 ## Project Structure
 
@@ -41,7 +41,7 @@ project-root/
 └── src/
     ├── main.rs
     ├── api/
-    │   └── mod.rs           ← HTTP API calls (reqwest)
+    │   └── mod.rs           ← HTTP API calls (FlUrl) + shared response helpers
     ├── components/
     │   └── mod.rs           ← reusable UI components
     ├── dialogs/
@@ -51,7 +51,7 @@ project-root/
     ├── icons/
     │   └── mod.rs
     ├── models/
-    │   └── mod.rs           ← request/response models + WS message parser
+    │   └── mod.rs           ← client view-state + WS message parser (wire models live in rest-api-shared)
     ├── states/
     │   ├── mod.rs
     │   ├── app_state.rs
@@ -86,7 +86,14 @@ dioxus-utils = { tag = "0.7.0", git = "https://github.com/MyJetTools/dioxus-util
     "web",
 ] }
 
-reqwest = { version = "*", features = ["json"] }
+# Shared wire models — reused verbatim by the REST-API server and this client.
+# On the client the crate is pulled in WITHOUT the "server" feature.
+rest-api-shared = { path = "../rest-api-shared" }
+# HTTP client; compiles to the browser fetch API under wasm and resolves relative "/api/..." URLs.
+flurl = { tag = "0.7.0", git = "https://github.com/MyJetTools/fl-url.git" }
+# Provides the THttpRequestBuilder bound named by the generic authed-POST helper.
+my-http-utils = { tag = "0.1.0", git = "https://github.com/MyJetTools/my-http-utils.git" }
+
 reqwasm = "*"
 futures = { version = "*" }
 
@@ -104,7 +111,8 @@ Key differences from fullstack:
 - **No** `dioxus/fullstack` or `dioxus/server` features
 - **No** `tokio` dependency
 - `dioxus-utils` uses `"web"` feature, not `"fullstack"`
-- `reqwest` for HTTP API calls (compiled to WASM fetch)
+- `flurl` for HTTP API calls (compiles to the WASM fetch API; resolves relative `/api/...` URLs)
+- `rest-api-shared` (path dep, **without** the `server` feature) for wire models shared with the REST-API server; `my-http-utils` names the `THttpRequestBuilder` bound used by the generic authed-POST helper
 - `reqwasm` for WebSocket connections from the browser
 
 ## Dioxus.toml
@@ -421,46 +429,278 @@ pub enum LocationState {
 }
 ```
 
+## Shared Wire Models (`rest-api-shared`)
+
+Every model that crosses the wire lives in a **separate crate `rest-api-shared`** and is reused
+**verbatim** by both the REST-API server and the wasm client. One definition — both ends. This kills
+request/response drift: the client cannot serialize a shape the server does not accept.
+
+- **Request models** derive `MyHttpInput`:
+
+  ```rust
+  // rest-api-shared/src/auth.rs
+  use my_http_utils::macros::MyHttpInput;
+
+  #[derive(MyHttpInput)]
+  pub struct SendCodeRequest {
+      #[http_body(name = "email", description = "")]
+      pub email: String,
+  }
+
+  #[derive(MyHttpInput)]
+  pub struct VerifyCodeRequest {
+      #[http_body(name = "email", description = "")]
+      pub email: String,
+      #[http_body(name = "code", description = "")]
+      pub code: String,
+  }
+  ```
+
+- **Response models** derive `Serialize, Deserialize, MyHttpObjectStructure, Clone, Debug, PartialEq`:
+
+  ```rust
+  use serde::{Deserialize, Serialize};
+  use my_http_utils::macros::MyHttpObjectStructure;
+
+  #[derive(Serialize, Deserialize, MyHttpObjectStructure, Clone, Debug, PartialEq)]
+  pub struct SessionTokenResponse {
+      pub token: String,
+      #[serde(rename = "refreshToken")]
+      pub refresh_token: String,
+  }
+
+  #[derive(Serialize, Deserialize, MyHttpObjectStructure, Clone, Debug, PartialEq)]
+  pub struct UserInfoResponse {
+      pub email: String,
+      pub first_name: String,
+      pub last_name: String,
+  }
+  ```
+
+### The crate is wasm-clean
+
+`rest-api-shared` depends **only on `my-http-utils`** (never on `my-http-server`), so it compiles to
+`wasm32`. A `server` feature turns on the server-side request parsing that only the REST-API service
+needs:
+
+```toml
+# rest-api-shared/Cargo.toml
+[dependencies]
+my-http-utils = { tag = "0.1.0", git = "https://github.com/MyJetTools/my-http-utils.git" }
+serde = { version = "*", features = ["derive"] }
+
+[features]
+server = ["my-http-utils/server"]
+```
+
+- **Server** depends on it **with** `features = ["server"]` — it needs to parse the incoming request.
+- **Client** depends on it **without** any feature — it only needs the schema plus the FlUrl request
+  builder (the `THttpRequestBuilder` impl used by `execute_request`).
+
+### Models stay pure data
+
+Shared types carry **no methods and no behaviour** — only fields. Presentational or derived helpers
+belong to the **consumer** as an extension trait, so the wire contract never picks up client-only logic:
+
+```rust
+// client: src/models/user_info_ext.rs
+use rest_api_shared::auth::UserInfoResponse as UserInfo;
+
+pub trait UserInfoExt {
+    fn full_name(&self) -> String;
+}
+
+impl UserInfoExt for UserInfo {
+    fn full_name(&self) -> String {
+        format!("{} {}", self.first_name, self.last_name)
+    }
+}
+```
+
+When a shared type reads better under a local name, re-export it:
+
+```rust
+pub use rest_api_shared::auth::UserInfoResponse as UserInfo;
+```
+
+> **NEVER** put `///` doc-comments on the fields of a struct that derives `MyHttpInput` or
+> `MyHttpObjectStructure` — the proc-macro panics. Document the struct itself instead, or use the
+> `description = "..."` attribute argument on the field.
+
+### What stays in `src/models/`
+
+Only **client view-state** that never crosses the wire — dialog state, form buffers, UI toggles,
+the `RequestError` type, WS message enums. Anything that goes to or comes from the REST API belongs in
+`rest-api-shared`, not here.
+
 ## API Calls
 
-All API calls use `reqwest` with JSON. Base URL is derived from `GlobalAppSettings::get_origin()`.
+API calls use **FlUrl**, which compiles to the browser `fetch` API under wasm. Two rules:
+
+1. **Use relative URLs.** Pass `"/api/..."` straight into `FlUrl::new(...)` — the wasm backend resolves
+   it against the current page origin for you. **Do not** compute a base URL; there is no
+   `get_base_url()`. (`GlobalAppSettings::get_origin()` is still needed for the **WebSocket** URL only —
+   the browser WebSocket API requires an absolute `ws`/`wss` URL.)
+2. **Build the request from a shared `MyHttpInput` model** via `.execute_request(HttpVerb::X, model)`.
+   Never hand-assemble a JSON body. For a request that has no parameters, pass `EmptyRequestModel`
+   instead of declaring an empty model.
+
+### Centralized response handling (`src/api/mod.rs`)
+
+Status/error handling lives in **three helpers**, each taking the raw `Result<FlUrlResponse, FlUrlError>`
+straight off FlUrl and decoding status + error **once**. Every API function forwards FlUrl's `Result`
+into a helper — there is no repeated `if !is_success(...) { return Err(...) }` in each method.
+
+```rust
+// api/mod.rs
+mod auth;
+pub use auth::*;
+
+use flurl::{FlUrl, FlUrlError, FlUrlResponse, HttpVerb};
+use my_http_utils::THttpRequestBuilder;
+use serde::de::DeserializeOwned;
+
+use crate::models::RequestError;
+
+fn is_success(status: u16) -> bool {
+    (200..300).contains(&status)
+}
+
+async fn read_error_body(response: &mut FlUrlResponse) -> RequestError {
+    let message = response
+        .get_body_as_str()
+        .await
+        .map(|body| body.to_string())
+        .unwrap_or_else(|err| err.to_string());
+
+    RequestError { message }
+}
+
+/// 2xx → deserialize the body into `T`; any other status → `Err` carrying the response body.
+pub async fn handle_http_response<T: DeserializeOwned>(
+    response: Result<FlUrlResponse, FlUrlError>,
+) -> Result<T, RequestError> {
+    let mut response = response?;
+
+    if is_success(response.get_status_code()) {
+        return Ok(response.get_json().await?);
+    }
+
+    Err(read_error_body(&mut response).await)
+}
+
+/// Endpoints with no response body: 2xx → `Ok(())`, otherwise `Err` carrying the response body.
+pub async fn handle_http_empty(
+    response: Result<FlUrlResponse, FlUrlError>,
+) -> Result<(), RequestError> {
+    let mut response = response?;
+
+    if is_success(response.get_status_code()) {
+        return Ok(());
+    }
+
+    Err(read_error_body(&mut response).await)
+}
+
+/// Like `handle_http_response`, but `401`/`403` map to `Ok(None)` (not logged in / no rights).
+pub async fn handle_http_response_opt<T: DeserializeOwned>(
+    response: Result<FlUrlResponse, FlUrlError>,
+) -> Result<Option<T>, RequestError> {
+    let mut response = response?;
+
+    let status = response.get_status_code();
+
+    if status == 401 || status == 403 {
+        return Ok(None);
+    }
+
+    if is_success(status) {
+        return Ok(Some(response.get_json().await?));
+    }
+
+    Err(read_error_body(&mut response).await)
+}
+
+/// Authenticated POST: attaches the session token, then executes any shared `MyHttpInput` model.
+/// The `THttpRequestBuilder` bound (from `my-http-utils`) is what lets the model drive the request.
+async fn authed_post<TModel: THttpRequestBuilder>(
+    url: &str,
+    model: TModel,
+) -> Result<FlUrlResponse, FlUrlError> {
+    let token = crate::web::storage::session::get_session_token().unwrap_or_default();
+
+    FlUrl::new(url)
+        .with_header("Authorization", format!("Bearer {}", token))
+        .execute_request(HttpVerb::Post, model)
+        .await
+}
+```
+
+### Example: `api/auth.rs`
+
+Each call builds a shared model, hands FlUrl's `Result` to a helper, and returns. No status checks,
+no manual JSON, no base URL.
 
 ```rust
 // api/auth.rs
-use crate::models::*;
+use flurl::{EmptyRequestModel, FlUrl, HttpVerb};
+use rest_api_shared::auth::*;
 
-fn get_base_url() -> String {
-    let settings = dioxus_utils::js::GlobalAppSettings::new();
-    let origin = settings.get_origin();
-    if origin.ends_with('/') {
-        origin[..origin.len() - 1].to_string()
-    } else {
-        origin.to_string()
-    }
+use crate::models::RequestError;
+
+use super::{authed_post, handle_http_empty, handle_http_response, handle_http_response_opt};
+
+// POST with a body, no response payload.
+pub async fn send_code(email: &str) -> Result<(), RequestError> {
+    let response = FlUrl::new("/api/auth/v1/SendCode")
+        .execute_request(HttpVerb::Post, SendCodeRequest { email: email.to_string() })
+        .await;
+
+    handle_http_empty(response).await
 }
 
-pub async fn send_code(email: &str) -> Result<(), RequestError> {
-    let url = format!("{}/api/auth/v1/SendCode", get_base_url());
+// POST with a body and a typed response payload.
+pub async fn verify_code(email: &str, code: &str) -> Result<SessionTokenResponse, RequestError> {
+    let request = VerifyCodeRequest {
+        email: email.to_string(),
+        code: code.to_string(),
+    };
 
-    let response = reqwest::Client::new()
-        .post(&url)
-        .json(&SendCodeRequest { email: email.to_string() })
-        .send()
-        .await?;
+    let response = FlUrl::new("/api/auth/v1/VerifyCode")
+        .execute_request(HttpVerb::Post, request)
+        .await;
 
-    if response.status().is_success() {
-        Ok(())
-    } else {
-        Err(RequestError {
-            message: format!("Failed to send code: {}", response.status()),
-        })
-    }
+    handle_http_response(response).await
+}
+
+// Authenticated GET with no parameters — `EmptyRequestModel`, 401/403 → `Ok(None)`.
+pub async fn get_user_info() -> Result<Option<UserInfoResponse>, RequestError> {
+    let token = crate::web::storage::session::get_session_token().unwrap_or_default();
+
+    let response = FlUrl::new("/api/auth/v1/UserInfo")
+        .with_header("Authorization", format!("Bearer {}", token))
+        .execute_request(HttpVerb::Get, EmptyRequestModel)
+        .await;
+
+    handle_http_response_opt(response).await
+}
+
+// Authenticated POST with no parameters — reuses the generic helper + `EmptyRequestModel`.
+pub async fn logout() -> Result<(), RequestError> {
+    let response = authed_post("/api/auth/v1/Logout", EmptyRequestModel).await;
+
+    handle_http_empty(response).await
 }
 ```
 
 ## Models
 
-One file per type. `mod.rs` uses standard `mod x; pub use x::*;` pattern.
+`src/models/` holds **only client-side view-state** — no wire models (those live in `rest-api-shared`,
+see [Shared Wire Models](#shared-wire-models-rest-api-shared)). One file per type; `mod.rs` uses the
+standard `mod x; pub use x::*;` pattern.
+
+`RequestError` is the client-side error type every API function returns. It converts from both FlUrl
+transport errors and `serde_json` errors, so the helpers in `api/mod.rs` can use `?` freely.
 
 ```rust
 // models/request_error.rs
@@ -476,33 +716,35 @@ impl fmt::Display for RequestError {
     }
 }
 
-impl From<reqwest::Error> for RequestError {
-    fn from(err: reqwest::Error) -> Self {
+impl From<flurl::FlUrlError> for RequestError {
+    fn from(err: flurl::FlUrlError) -> Self {
+        Self { message: err.to_string() }
+    }
+}
+
+// get_json() / try_as_json() surface serde_json::Error, so RequestError converts from it too.
+impl From<serde_json::Error> for RequestError {
+    fn from(err: serde_json::Error) -> Self {
         Self { message: err.to_string() }
     }
 }
 ```
 
+Client view-state — e.g. a form buffer — is a plain struct, and unlike the pure shared wire models it
+may carry behaviour:
+
 ```rust
-// models/auth.rs
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize)]
-pub struct SendCodeRequest {
-    pub email: String,
-}
-
-#[derive(Serialize)]
-pub struct VerifyCodeRequest {
+// models/login_form.rs
+#[derive(Default, Clone)]
+pub struct LoginForm {
     pub email: String,
     pub code: String,
 }
 
-#[derive(Deserialize)]
-pub struct SessionTokenResponse {
-    pub token: String,
-    #[serde(rename = "refreshToken")]
-    pub refresh_token: String,
+impl LoginForm {
+    pub fn is_email_valid(&self) -> bool {
+        self.email.contains('@')
+    }
 }
 ```
 
@@ -794,11 +1036,15 @@ dx build --package your-project-name
 
 1. **No server module** — client-side project has no `src/server/`, no `#[server]` functions, no `#[cfg(feature = "server")]`
 2. **`dioxus-utils` feature is `"web"`**, not `"fullstack"`
-3. **API calls via `reqwest`** — compiled to WASM fetch API in the browser
+3. **API calls via FlUrl with relative `/api/...` URLs** — the wasm backend resolves them against the page origin; build requests from shared `rest-api-shared` models via `.execute_request(HttpVerb::X, model)` (never hand-assemble JSON)
 4. **WebSocket via `reqwasm`** — browser WebSocket API, no custom headers, token via query parameter
-5. **`GlobalAppSettings::get_origin()`** — returns the page origin, use it to build API and WS URLs
+5. **`GlobalAppSettings::get_origin()`** — use it **only** for the WebSocket URL (the browser WS API needs an absolute `ws`/`wss` URL); API calls use relative URLs and never compute a base URL
 6. **`dioxus_utils::console_log()`** — for browser console logging
 7. **Pre-auth vs post-auth pages** — controlled by `LocationState` and `with_ws` flag on `App` component
 8. **CSS compiled by `build.rs`** — source in `css/`, output in `public/assets/app.css`. **NEVER** edit `app.css` directly
 9. **Favicon required** — `public/favicon.ico`
 10. **Docker image** — `myjettools/web-app-host:0.1.1` serves static files from `./wwwroot`
+11. **Wire models live in `rest-api-shared`** — request models (`MyHttpInput`) and response models (`Serialize, Deserialize, MyHttpObjectStructure, Clone, Debug, PartialEq`) are defined once and shared verbatim by the REST-API server and the client; the client depends on the crate **without** the `server` feature. `src/models/` keeps only client view-state
+12. **Centralize HTTP handling** — every API function forwards FlUrl's raw `Result<FlUrlResponse, FlUrlError>` to `handle_http_response` / `handle_http_empty` / `handle_http_response_opt` in `api/mod.rs`; no per-call status checks
+13. **Parameter-less requests use `EmptyRequestModel`** — don't declare an empty `MyHttpInput` model just to satisfy `execute_request`
+14. **Never put `///` doc-comments on `MyHttpInput` / `MyHttpObjectStructure` struct fields** — the proc-macro panics; use the `description = "..."` attribute instead
