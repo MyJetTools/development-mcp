@@ -55,3 +55,7 @@ mod single_vm_unix_socket_resource;
 pub use single_vm_unix_socket_resource::*;
 mod my_json_resource;
 pub use my_json_resource::*;
+mod my_http_utils_resource;
+pub use my_http_utils_resource::*;
+mod my_web_sockets_wasm_resource;
+pub use my_web_sockets_wasm_resource::*;
