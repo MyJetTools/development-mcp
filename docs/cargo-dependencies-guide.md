@@ -31,6 +31,21 @@ anyhow = "*"
 - If the library is a common/standard crates.io dependency, pin it as `version = "*"`, matching the local convention unless project-specific guidance says otherwise.
 - Add features explicitly; keep the style consistent with existing entries.
 
+## When a dependency fails to compile
+
+If the build breaks inside one of the dependencies (not in your own code), **do not start debugging the library first**. Almost always it is a stale lock file / stale build cache after a tag bump, not a real bug in the crate.
+
+Run this in the project root, in order, before any analysis:
+
+```bash
+cargo clean
+cargo update
+cargo build
+```
+
+- Only if the error still reproduces after a clean rebuild, start investigating the dependency itself (version/tag mismatch, feature flags, breaking API change).
+- Never edit or patch a dependency, downgrade a tag, or report "the library is broken" until the `clean` → `update` → `build` cycle has been done and the error persists.
+
 ## When descriptions are missing
 
 If the crate does not document a custom integration approach, default to the standard pattern above. Start by copying the `flurl` line and adjust the name, tag, Git URL, and optional features.

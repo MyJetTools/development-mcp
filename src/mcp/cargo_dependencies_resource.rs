@@ -8,13 +8,13 @@ impl CargoDependenciesResource {
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/cargo-dependencies-guide.md";
     pub const TOOL_FN: &'static str = "get_cargo_dependencies_guide";
-    pub const TOOL_DESCRIPTION: &'static str = "Fetch Cargo dependencies guide resource content";
+    pub const TOOL_DESCRIPTION: &'static str = "Fetch Cargo dependencies guide resource content: how to add dependencies to Cargo.toml and what to do when a dependency fails to compile";
 }
 
 impl ResourceDefinition for CargoDependenciesResource {
     const RESOURCE_URI: &'static str = "resource://cargo-dependencies-guide";
     const RESOURCE_NAME: &'static str = "Cargo Dependencies Guide";
-    const DESCRIPTION: &'static str = "How to add dependencies to Cargo.toml";
+    const DESCRIPTION: &'static str = "How to add dependencies to Cargo.toml and how to react when a dependency fails to compile";
     const MIME_TYPE: &'static str = "text/markdown";
 }
 
