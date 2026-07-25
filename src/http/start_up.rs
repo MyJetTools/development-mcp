@@ -88,6 +88,14 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(MyWebSocketsWasmReadmeTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(ListResourceToolsTool::new(app.clone())));
 
+    // v0.2 retrieval layer. Registered alongside the legacy get_* tools on
+    // purpose: both stay live so the two can be compared on real questions
+    // before the per-document tools are retired.
+    mcp.register_tool_call(Arc::new(SearchDocsHandler::new(app.clone())));
+    mcp.register_tool_call(Arc::new(GetDocHandler::new(app.clone())));
+
+    crate::rag::spawn_index_builder(app.clone());
+
     let controllers = Arc::new(super::builder::build_controllers(app));
     http_server.add_middleware(controllers);
 
