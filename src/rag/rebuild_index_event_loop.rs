@@ -34,7 +34,9 @@ impl EventsLoopTick<Vec<FetchedDoc>> for RebuildIndexEventLoop {
         // Idempotent - only the first call actually loads the model. Doing it
         // here rather than at startup keeps the ~450MB download off the boot
         // path, so the server answers immediately with an empty index.
-        if let Err(err) = self.app.embedder.init().await {
+        let settings = self.app.get_settings();
+
+        if let Err(err) = self.app.embedder.init(settings.embedding_model).await {
             my_logger::LOGGER.write_fatal_error(
                 "RebuildIndexEventLoop",
                 format!("Embedding model failed to load: {}", err),

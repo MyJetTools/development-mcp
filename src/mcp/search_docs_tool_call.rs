@@ -4,7 +4,7 @@ use mcp_server_middleware::*;
 use serde::{Deserialize, Serialize};
 
 use crate::app::AppContext;
-use crate::rag::SearchMode;
+use crate::rag::{contains_cyrillic, SearchMode};
 
 #[derive(ApplyJsonSchema, Debug, Serialize, Deserialize)]
 pub struct SearchDocsInputData {
@@ -106,6 +106,18 @@ impl McpToolCall<SearchDocsInputData, SearchDocsResponse> for SearchDocsHandler 
 
         let settings = self.app.get_settings();
 
+        // Refuse rather than answer badly. With an English-only embedding model
+        // a Russian query does not fail - it quietly returns the wrong
+        // passages, and the answer built on them still reads as confident.
+        if settings.require_english_query && contains_cyrillic(query) {
+            return Err(format!(
+                "This index is built with an English-only model ({}). Ask in English - \
+                 translate the question and search again. The guides use English \
+                 terminology throughout, so an English query is also the more precise one.",
+                settings.embedding_model.as_str()
+            ));
+        }
+
         let top_k = model
             .top_k
             .unwrap_or(settings.default_top_k)
@@ -120,24 +132,57 @@ impl McpToolCall<SearchDocsInputData, SearchDocsResponse> for SearchDocsHandler 
         // The embedding is only needed by the rankings that use it.
         let query_vector = match mode {
             SearchMode::Bm25 => Vec::new(),
-            _ => self.app.embedder.embed_query(query).await?,
+            _ => {
+                self.app
+                    .embedder
+                    .embed_query(settings.embedding_model, query)
+                    .await?
+            }
         };
 
-        let hits = index.search(mode, &query_vector, query, top_k, &settings);
+        let hits = if settings.rerank_enabled {
+            // Two stages: the index proposes candidates, the cross-encoder
+            // decides. Reranking a shortlist is what makes this affordable -
+            // scoring all 700 chunks pairwise would not be.
+            let candidates =
+                index.candidates(mode, &query_vector, query, settings.rerank_candidates, &settings);
+
+            let passages: Vec<String> = candidates
+                .iter()
+                .map(|(i, _)| index.rerank_passage(*i))
+                .collect();
+
+            let reranked = self
+                .app
+                .reranker
+                .rerank(settings.rerank_model, query.to_string(), passages)
+                .await?;
+
+            reranked
+                .into_iter()
+                .filter(|(_, score)| *score >= settings.min_rerank_score)
+                .take(top_k)
+                .map(|(pos, score)| index.hit_at(candidates[pos].0, score))
+                .collect()
+        } else {
+            index.search(mode, &query_vector, query, top_k, &settings)
+        };
 
         let status = if hits.is_empty() {
             format!(
-                "No fragment in the guides matched this query in {} mode (searched {} chunks \
+                "No fragment in the guides matched this query in {} mode{} (searched {} chunks \
                  from {} documents). Treat this as 'the guides do not cover it'.",
                 mode.as_str(),
+                if settings.rerank_enabled { " + rerank" } else { "" },
                 index.chunks_amount(),
                 index.documents_indexed
             )
         } else {
             format!(
-                "{} fragment(s) found in {} mode across {} indexed chunks (index built at {}).",
+                "{} fragment(s) found in {} mode{} across {} indexed chunks (index built at {}).",
                 hits.len(),
                 mode.as_str(),
+                if settings.rerank_enabled { " + rerank" } else { "" },
                 index.chunks_amount(),
                 index.built_at.to_rfc3339()
             )

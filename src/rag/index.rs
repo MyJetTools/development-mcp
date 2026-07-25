@@ -82,6 +82,52 @@ impl DocIndex {
         self.chunks.len()
     }
 
+    /// The chunk text as the reranker should see it: the heading breadcrumb
+    /// carries context the body alone often does not mention.
+    pub fn rerank_passage(&self, index: usize) -> String {
+        let chunk = &self.chunks[index];
+
+        if chunk.heading_path.is_empty() {
+            format!("{}\n{}", chunk.doc_name, chunk.text)
+        } else {
+            format!("{} > {}\n{}", chunk.doc_name, chunk.heading_path, chunk.text)
+        }
+    }
+
+    pub fn hit_at(&self, index: usize, score: f32) -> SearchHit {
+        let chunk = &self.chunks[index];
+
+        SearchHit {
+            filename: chunk.filename.clone(),
+            doc_name: chunk.doc_name.clone(),
+            heading_path: chunk.heading_path.clone(),
+            text: chunk.text.clone(),
+            score,
+        }
+    }
+
+    /// First stage only: the chunks worth looking at, best first. `search` cuts
+    /// this to top_k directly; with reranking on, the cross-encoder re-scores
+    /// these before the cut.
+    pub fn candidates(
+        &self,
+        mode: SearchMode,
+        query_vector: &[f32],
+        query_text: &str,
+        take: usize,
+        settings: &RuntimeSettings,
+    ) -> Vec<(usize, f32)> {
+        if take == 0 {
+            return Vec::new();
+        }
+
+        match mode {
+            SearchMode::Dense => self.search_dense(query_vector, take, settings),
+            SearchMode::Bm25 => self.search_bm25(query_text, take, settings),
+            SearchMode::Hybrid => self.search_hybrid(query_vector, query_text, take, settings),
+        }
+    }
+
     pub fn search(
         &self,
         mode: SearchMode,
