@@ -42,4 +42,6 @@ fastembed = { version = "*" }
 
 arc-swap = "*"
 
+ahash = "*"
+
 parking_lot = "*"
