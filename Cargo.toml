@@ -45,3 +45,8 @@ arc-swap = "*"
 ahash = "*"
 
 parking_lot = "*"
+
+tikv-jemallocator = { version = "*", features = [
+    "unprefixed_malloc_on_supported_platforms",
+    "stats",
+] }
