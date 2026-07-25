@@ -6,6 +6,8 @@
 
 use fastembed::EmbeddingModel;
 
+use crate::rag::SearchMode;
+
 // ---------------------------------------------------------------------------
 // Chunking
 // ---------------------------------------------------------------------------
@@ -70,6 +72,30 @@ pub const MIN_SCORE: f32 = 0.72;
 
 pub const DEFAULT_TOP_K: i32 = 6;
 pub const MAX_TOP_K: i32 = 15;
+
+/// Which ranking answers a query when the caller does not say.
+///
+/// Left on dense so that changing this file does not silently change what the
+/// baseline measurement was taken against - pass `mode` explicitly to compare.
+pub const DEFAULT_SEARCH_MODE: SearchMode = SearchMode::Dense;
+
+/// Standard BM25 constants. `k1` controls how fast term frequency saturates,
+/// `b` how hard long chunks are penalised.
+pub const BM25_K1: f32 = 1.2;
+pub const BM25_B: f32 = 0.75;
+
+/// BM25 scores are unbounded and corpus-dependent, so this is not comparable to
+/// MIN_SCORE. It only needs to be above zero: a chunk sharing no term with the
+/// query is never scored at all, which is what makes "not in the guides" come
+/// out right without any tuning.
+pub const MIN_BM25_SCORE: f32 = 0.0;
+
+/// How deep into each ranking reciprocal rank fusion looks.
+pub const HYBRID_CANDIDATES: usize = 30;
+
+/// The damping constant in `1 / (k + rank)`. 60 is the value from the original
+/// RRF paper and is what most implementations use.
+pub const RRF_K: f32 = 60.0;
 
 // ---------------------------------------------------------------------------
 // Index refresh
