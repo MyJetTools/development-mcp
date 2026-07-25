@@ -1,28 +1,12 @@
 use std::sync::Arc;
 
-use fastembed::{EmbeddingModel, TextEmbedding, TextInitOptions};
+use fastembed::{TextEmbedding, TextInitOptions};
 use parking_lot::Mutex;
 
-/// Multilingual on purpose: the guides are written in English, but questions
-/// arrive in Russian just as often. A monolingual English model (the fastembed
-/// default) silently misses those - the query and the passage end up in
-/// unrelated regions of the vector space.
-const MODEL: EmbeddingModel = EmbeddingModel::MultilingualE5Small;
-
-/// E5-family models are trained with these prefixes and lose noticeable
-/// accuracy without them.
-const PASSAGE_PREFIX: &str = "passage: ";
-const QUERY_PREFIX: &str = "query: ";
-
-/// Kept small on purpose. The default (256) builds huge intermediate tensors
-/// and spikes RSS by hundreds of MB during a rebuild; 32 costs a few extra
-/// seconds once every 15 minutes, which nobody will ever notice.
-const EMBED_BATCH_SIZE: usize = 32;
-
-/// Where model weights are cached. Must point at a mounted volume in Docker,
-/// otherwise the ~450MB download repeats on every container restart.
-const CACHE_DIR_ENV: &str = "FASTEMBED_CACHE_PATH";
-const DEFAULT_CACHE_DIR: &str = "/app/model-cache";
+use crate::rag::{
+    DEFAULT_MODEL_CACHE_DIR, EMBEDDING_MODEL, EMBED_BATCH_SIZE, MODEL_CACHE_DIR_ENV,
+    PASSAGE_PREFIX, QUERY_PREFIX,
+};
 
 /// Wraps the fastembed model.
 ///
@@ -54,10 +38,10 @@ impl Embedder {
         let inner = self.inner.clone();
 
         let result = tokio::task::spawn_blocking(move || {
-            let cache_dir = std::env::var(CACHE_DIR_ENV)
-                .unwrap_or_else(|_| DEFAULT_CACHE_DIR.to_string());
+            let cache_dir = std::env::var(MODEL_CACHE_DIR_ENV)
+                .unwrap_or_else(|_| DEFAULT_MODEL_CACHE_DIR.to_string());
 
-            let options = TextInitOptions::new(MODEL)
+            let options = TextInitOptions::new(EMBEDDING_MODEL)
                 .with_cache_dir(std::path::PathBuf::from(cache_dir));
 
             let model = TextEmbedding::try_new(options)

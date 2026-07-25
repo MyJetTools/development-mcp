@@ -8,14 +8,10 @@ use parking_lot::Mutex;
 use rust_extensions::events_loop::EventsLoop;
 use rust_extensions::AppStates;
 
-use crate::rag::{DocIndex, Embedder, FetchedDoc};
+use crate::rag::{DocIndex, Embedder, FetchedDoc, REBUILD_ITERATION_TIMEOUT_SECS};
 
 pub const APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 pub const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
-
-/// A full rebuild embeds every chunk of every document. That is minutes of CPU,
-/// not seconds, so the events loop must not treat it as a stuck iteration.
-const REBUILD_ITERATION_TIMEOUT_SECS: u64 = 20 * 60;
 
 pub struct AppContext {
     pub app_states: Arc<AppStates>,

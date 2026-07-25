@@ -8,3 +8,5 @@ mod index;
 pub use index::*;
 mod rebuild_index_event_loop;
 pub use rebuild_index_event_loop::*;
+mod settings;
+pub use settings::*;

@@ -7,10 +7,6 @@ use crate::app::AppContext;
 use crate::mcp::{all_doc_entries, scripts::load_resource_by_http};
 use crate::rag::{chunk_markdown, DocIndex, IndexedChunk};
 
-/// How often the documents are re-fetched and checked for changes. Cheap now
-/// that a poll without changes costs 29 HTTP requests and no CPU at all.
-pub const POLL_INTERVAL_SECS: u64 = 5 * 60;
-
 /// A document as fetched from GitHub, with the hash used to decide whether
 /// anything actually changed since the last poll.
 pub struct FetchedDoc {
