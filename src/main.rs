@@ -3,6 +3,7 @@ use std::sync::Arc;
 use app::AppContext;
 
 mod app;
+mod glibc_compat;
 mod http;
 mod mcp;
 mod rag;
