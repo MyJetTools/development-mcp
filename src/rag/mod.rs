@@ -10,8 +10,6 @@ mod index;
 pub use index::*;
 mod rebuild_index_event_loop;
 pub use rebuild_index_event_loop::*;
-mod reranker;
-pub use reranker::*;
 mod runtime_settings;
 pub use runtime_settings::*;
 mod settings;

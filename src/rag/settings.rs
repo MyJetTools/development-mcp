@@ -4,8 +4,9 @@
 //! questions asked in Russian. Numbers here are the observations that should
 //! inform the next change - not a claim that the current values are right.
 
+use fastembed::EmbeddingModel;
 
-use crate::rag::{EmbeddingModelChoice, RerankerModelChoice, SearchMode};
+use crate::rag::SearchMode;
 
 // ---------------------------------------------------------------------------
 // Chunking
@@ -25,18 +26,10 @@ pub const MIN_CHUNK_CHARS: usize = 220;
 // Embedding
 // ---------------------------------------------------------------------------
 
-/// Which embedding model the index is built with. Multilingual is the safe
-/// default because it survives a query in any language; the English-only models
-/// are a third of the size and sharper on English, but only if every query
-/// really does arrive in English - which is what REQUIRE_ENGLISH_QUERY enforces.
-pub const EMBEDDING_MODEL: EmbeddingModelChoice = EmbeddingModelChoice::MultilingualE5Small;
-
-/// Refuse a query containing Cyrillic instead of answering it badly.
-///
-/// The instruction in the tool description is an agreement, not a guarantee.
-/// With an English-only model a Russian query does not fail loudly - it returns
-/// confident nonsense. This turns that into an error that says what to do.
-pub const REQUIRE_ENGLISH_QUERY: bool = false;
+/// Multilingual on purpose: the guides are in English, the questions often are
+/// not. Costs ~450MB resident - a monolingual model is ~130MB but misses every
+/// Russian query.
+pub const EMBEDDING_MODEL: EmbeddingModel = EmbeddingModel::MultilingualE5Small;
 
 /// E5-family models are trained with these prefixes and lose noticeable
 /// accuracy without them.
@@ -119,25 +112,3 @@ pub const POLL_ITERATION_TIMEOUT_SECS: u64 = 180;
 /// A full rebuild embeds every chunk of every document: minutes of CPU, not
 /// seconds. The events loop must not treat that as a stuck iteration.
 pub const REBUILD_ITERATION_TIMEOUT_SECS: u64 = 20 * 60;
-
-// ---------------------------------------------------------------------------
-// Reranking
-// ---------------------------------------------------------------------------
-
-/// Off by default: the weights are ~1.1GB on top of the embedding model and
-/// they load lazily, so nothing is paid until reranking is switched on.
-pub const RERANK_ENABLED: bool = false;
-
-pub const RERANK_MODEL: RerankerModelChoice = RerankerModelChoice::JinaV2Multilingual;
-
-/// How many candidates the first stage hands to the cross-encoder. Reranking
-/// cost is linear in this, so it trades latency for the chance to recover a
-/// document the first stage ranked badly.
-pub const RERANK_CANDIDATES: usize = 30;
-
-/// Cross-encoder scores are calibrated, unlike the dense cosines - a genuinely
-/// irrelevant chunk lands near or below zero. That is what makes an honest
-/// "not covered" possible at all, which no MIN_SCORE could achieve.
-pub const MIN_RERANK_SCORE: f32 = 0.0;
-
-pub const RERANK_BATCH_SIZE: usize = 8;

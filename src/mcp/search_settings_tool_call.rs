@@ -4,9 +4,7 @@ use mcp_server_middleware::*;
 use serde::{Deserialize, Serialize};
 
 use crate::app::AppContext;
-use crate::rag::{
-    poll_and_maybe_rebuild, EmbeddingModelChoice, RerankerModelChoice, RuntimeSettings, SearchMode,
-};
+use crate::rag::{poll_and_maybe_rebuild, RuntimeSettings, SearchMode};
 
 #[derive(ApplyJsonSchema, Debug, Serialize, Deserialize)]
 pub struct EmptySettingsInput {}
@@ -40,27 +38,6 @@ pub struct SearchSettingsView {
     #[property(description = "BM25 length-normalisation constant")]
     pub bm25_b: f32,
 
-    #[property(description = "Embedding model the index is built with. Needs a rebuild to take effect")]
-    pub embedding_model: String,
-
-    #[property(description = "Refuse queries containing Cyrillic instead of answering them badly")]
-    pub require_english_query: bool,
-
-    #[property(description = "Re-score the first stage's candidates with a cross-encoder")]
-    pub rerank_enabled: bool,
-
-    #[property(description = "Cross-encoder used when reranking is on")]
-    pub rerank_model: String,
-
-    #[property(description = "Cross-encoder actually resident in memory, if any. Differs from rerank_model until the first reranked query loads it")]
-    pub rerank_model_loaded: Option<String>,
-
-    #[property(description = "How many candidates the first stage hands to the cross-encoder")]
-    pub rerank_candidates: i32,
-
-    #[property(description = "Cross-encoder score below which a hit is discarded")]
-    pub min_rerank_score: f32,
-
     #[property(description = "Chunking: sections longer than this are split further. Needs a rebuild to take effect")]
     pub max_chunk_chars: i32,
 
@@ -80,13 +57,6 @@ impl SearchSettingsView {
             hybrid_candidates: settings.hybrid_candidates as i32,
             bm25_k1: settings.bm25_k1,
             bm25_b: settings.bm25_b,
-            embedding_model: settings.embedding_model.as_str().to_string(),
-            require_english_query: settings.require_english_query,
-            rerank_enabled: settings.rerank_enabled,
-            rerank_model: settings.rerank_model.as_str().to_string(),
-            rerank_model_loaded: None,
-            rerank_candidates: settings.rerank_candidates as i32,
-            min_rerank_score: settings.min_rerank_score,
             max_chunk_chars: settings.max_chunk_chars as i32,
             min_chunk_chars: settings.min_chunk_chars as i32,
         }
@@ -121,15 +91,7 @@ impl McpToolCall<EmptySettingsInput, SearchSettingsView> for GetSearchSettingsHa
         &self,
         _model: EmptySettingsInput,
     ) -> Result<SearchSettingsView, String> {
-        let mut view = SearchSettingsView::from(&self.app.get_settings());
-
-        view.rerank_model_loaded = self
-            .app
-            .reranker
-            .loaded_model()
-            .map(|it| it.as_str().to_string());
-
-        Ok(view)
+        Ok(SearchSettingsView::from(&self.app.get_settings()))
     }
 }
 
@@ -165,24 +127,6 @@ pub struct UpdateSearchSettingsInput {
 
     #[property(description = "BM25 length normalisation, 0 to 1. 0.75 is the usual value")]
     pub bm25_b: Option<f32>,
-
-    #[property(description = "Embedding model: 'multilingual-e5-small' (~450MB, any language), 'bge-small-en' (~130MB, English only) or 'bge-base-en' (~440MB, English only). Requires a rebuild")]
-    pub embedding_model: Option<String>,
-
-    #[property(description = "Refuse queries containing Cyrillic. Turn on together with an English-only model")]
-    pub require_english_query: Option<bool>,
-
-    #[property(description = "Turn cross-encoder reranking on or off. The weights load lazily on first use")]
-    pub rerank_enabled: Option<bool>,
-
-    #[property(description = "Cross-encoder: 'jina-v2-multilingual' (~1.1GB) or 'bge-v2-m3' (stronger, multi-GB)")]
-    pub rerank_model: Option<String>,
-
-    #[property(description = "How many candidates to rerank. Cost is linear in this")]
-    pub rerank_candidates: Option<i32>,
-
-    #[property(description = "Cross-encoder score below which a hit is discarded. These scores are calibrated, so a real threshold is possible here")]
-    pub min_rerank_score: Option<f32>,
 
     #[property(description = "Sections longer than this are split further. Requires a rebuild")]
     pub max_chunk_chars: Option<i32>,
@@ -296,39 +240,6 @@ impl McpToolCall<UpdateSearchSettingsInput, UpdateSearchSettingsResponse>
             next.bm25_b = value;
         }
 
-        if let Some(value) = model.embedding_model.as_deref() {
-            next.embedding_model = EmbeddingModelChoice::parse(value).ok_or_else(|| {
-                format!(
-                    "Unknown embedding model '{}'. Use multilingual-e5-small, bge-small-en or bge-base-en.",
-                    value
-                )
-            })?;
-        }
-
-        if let Some(value) = model.require_english_query {
-            next.require_english_query = value;
-        }
-
-        if let Some(value) = model.rerank_enabled {
-            next.rerank_enabled = value;
-        }
-
-        if let Some(value) = model.rerank_model.as_deref() {
-            next.rerank_model = RerankerModelChoice::parse(value)
-                .ok_or_else(|| format!("Unknown reranker '{}'. Use jina-v2-multilingual or bge-v2-m3.", value))?;
-        }
-
-        if let Some(value) = model.rerank_candidates {
-            if value < 1 {
-                return Err("rerank_candidates must be at least 1".to_string());
-            }
-            next.rerank_candidates = value as usize;
-        }
-
-        if let Some(value) = model.min_rerank_score {
-            next.min_rerank_score = value;
-        }
-
         if let Some(value) = model.max_chunk_chars {
             if value < 200 {
                 return Err("max_chunk_chars below 200 would shred the documents".to_string());
@@ -350,7 +261,7 @@ impl McpToolCall<UpdateSearchSettingsInput, UpdateSearchSettingsResponse>
         let rebuild_required = next.needs_reindex_against(&previous);
 
         let status = if rebuild_required {
-            "Applied. The index still reflects the previous chunking or embedding model - \
+            "Applied. Chunk sizes changed, so the current index still reflects the old ones - \
              call rebuild_index with force=true to reindex."
                 .to_string()
         } else {

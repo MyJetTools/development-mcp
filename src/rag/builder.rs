@@ -135,10 +135,7 @@ pub async fn build_index(app: &Arc<AppContext>, docs: &[FetchedDoc]) -> Result<D
         })
         .collect();
 
-    let vectors = app
-        .embedder
-        .embed_passages(settings.embedding_model, passages.clone())
-        .await?;
+    let vectors = app.embedder.embed_passages(passages.clone()).await?;
 
     if vectors.len() != chunks.len() {
         return Err(format!(

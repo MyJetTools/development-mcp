@@ -8,9 +8,7 @@ use parking_lot::Mutex;
 use rust_extensions::events_loop::EventsLoop;
 use rust_extensions::AppStates;
 
-use crate::rag::{
-    DocIndex, Embedder, FetchedDoc, Reranker, RuntimeSettings, REBUILD_ITERATION_TIMEOUT_SECS,
-};
+use crate::rag::{DocIndex, Embedder, FetchedDoc, RuntimeSettings, REBUILD_ITERATION_TIMEOUT_SECS};
 
 pub const APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 pub const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
@@ -18,7 +16,6 @@ pub const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
 pub struct AppContext {
     pub app_states: Arc<AppStates>,
     pub embedder: Arc<Embedder>,
-    pub reranker: Arc<Reranker>,
 
     /// Read on every `search_docs` call, written once per rebuild - textbook
     /// ArcSwap territory, so readers never take a lock.
@@ -46,7 +43,6 @@ impl AppContext {
         AppContext {
             app_states: Arc::new(AppStates::create_initialized()),
             embedder: Arc::new(Embedder::new()),
-            reranker: Arc::new(Reranker::new()),
             index: ArcSwapOption::empty(),
             index_rebuild_in_progress: AtomicBool::new(false),
             indexed_hashes: Mutex::new(AHashMap::new()),
