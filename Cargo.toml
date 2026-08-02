@@ -1,6 +1,6 @@
 [package]
 name = "development-mcp"
-version = "0.2.0"
+version = "0.1.0"
 edition = "2021"
 
 [dependencies]
@@ -37,9 +37,3 @@ serde_json = "*"
 async-trait = "*"
 
 flurl = { tag = "0.7.0", git = "https://github.com/MyJetTools/fl-url.git" }
-
-fastembed = { version = "*" }
-
-arc-swap = "*"
-
-parking_lot = "*"

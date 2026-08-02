@@ -5,7 +5,6 @@ use app::AppContext;
 mod app;
 mod http;
 mod mcp;
-mod rag;
 
 #[tokio::main]
 async fn main() {
