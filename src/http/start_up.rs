@@ -104,9 +104,7 @@ pub async fn start(app: &Arc<AppContext>) {
         .start(app.app_states.clone(), my_logger::LOGGER.clone());
 
     let mut timer = MyTimer::new(Duration::from_secs(crate::rag::POLL_INTERVAL_SECS));
-    timer.set_iteration_timeout(Duration::from_secs(
-        crate::rag::POLL_ITERATION_TIMEOUT_SECS,
-    ));
+    timer.set_iteration_timeout(Duration::from_secs(180));
     timer.set_first_tick_before_delay();
     timer.register_timer("PollDocs", Arc::new(PollDocsTimer::new(app.clone())));
     timer.start(app.app_states.clone(), my_logger::LOGGER.clone());

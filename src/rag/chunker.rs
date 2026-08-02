@@ -8,7 +8,12 @@
 /// snippet is never mistaken for a heading, and so that an oversized section is
 /// never split in the middle of a fence.
 
-use crate::rag::{MAX_CHUNK_CHARS, MIN_CHUNK_CHARS};
+/// Sections longer than this are split further, by paragraph.
+const MAX_CHUNK_CHARS: usize = 2400;
+
+/// Chunks shorter than this get merged into the following one - a lone heading
+/// with two lines under it is not worth its own embedding.
+const MIN_CHUNK_CHARS: usize = 220;
 
 pub struct RawChunk {
     /// Breadcrumb of the headings this chunk sits under,

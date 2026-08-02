@@ -4,7 +4,14 @@ use mcp_server_middleware::*;
 use serde::{Deserialize, Serialize};
 
 use crate::app::AppContext;
-use crate::rag::{DEFAULT_TOP_K, MAX_TOP_K, MIN_SCORE};
+
+const DEFAULT_TOP_K: i32 = 6;
+const MAX_TOP_K: i32 = 15;
+
+/// Below this cosine the chunk is noise. Kept deliberately low - it is better
+/// to return a weak hit that the caller can judge than to silently return
+/// nothing and let the caller fall back on training-data guesswork.
+const MIN_SCORE: f32 = 0.72;
 
 #[derive(ApplyJsonSchema, Debug, Serialize, Deserialize)]
 pub struct SearchDocsInputData {
