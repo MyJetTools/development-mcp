@@ -7,7 +7,6 @@ mod glibc_compat;
 mod http;
 mod mcp;
 mod rag;
-mod timers;
 
 #[tokio::main]
 async fn main() {

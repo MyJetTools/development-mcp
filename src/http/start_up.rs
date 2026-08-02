@@ -1,11 +1,10 @@
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+use std::{net::SocketAddr, sync::Arc};
 
 use mcp_server_middleware::*;
 
 use my_http_server::MyHttpServer;
-use rust_extensions::MyTimer;
 
-use crate::{app::AppContext, mcp::*, rag::RebuildIndexEventLoop, timers::PollDocsTimer};
+use crate::{app::AppContext, mcp::*};
 
 pub async fn start(app: &Arc<AppContext>) {
     let mut http_server = MyHttpServer::new(SocketAddr::from(([0, 0, 0, 0], 8000)));
@@ -95,19 +94,7 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(SearchDocsHandler::new(app.clone())));
     mcp.register_tool_call(Arc::new(GetDocHandler::new(app.clone())));
 
-    // The poll timer only fetches and hashes; anything expensive is handed to
-    // the events loop, whose iteration timeout is sized for a full rebuild.
-    app.rebuild_index_events_loop
-        .register_event_loop(Arc::new(RebuildIndexEventLoop::new(app.clone())));
-
-    app.rebuild_index_events_loop
-        .start(app.app_states.clone(), my_logger::LOGGER.clone());
-
-    let mut timer = MyTimer::new(Duration::from_secs(crate::rag::POLL_INTERVAL_SECS));
-    timer.set_iteration_timeout(Duration::from_secs(180));
-    timer.set_first_tick_before_delay();
-    timer.register_timer("PollDocs", Arc::new(PollDocsTimer::new(app.clone())));
-    timer.start(app.app_states.clone(), my_logger::LOGGER.clone());
+    crate::rag::spawn_index_builder(app.clone());
 
     let controllers = Arc::new(super::builder::build_controllers(app));
     http_server.add_middleware(controllers);

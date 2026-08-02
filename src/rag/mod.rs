@@ -6,5 +6,3 @@ mod embedder;
 pub use embedder::*;
 mod index;
 pub use index::*;
-mod rebuild_index_event_loop;
-pub use rebuild_index_event_loop::*;
