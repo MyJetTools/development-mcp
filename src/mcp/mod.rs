@@ -4,8 +4,6 @@ mod resource_tools;
 pub use resource_tools::*;
 mod search_docs_tool_call;
 pub use search_docs_tool_call::*;
-mod search_settings_tool_call;
-pub use search_settings_tool_call::*;
 mod get_doc_tool_call;
 pub use get_doc_tool_call::*;
 mod flurl_resource;

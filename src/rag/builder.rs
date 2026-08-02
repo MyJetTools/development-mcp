@@ -5,7 +5,7 @@ use ahash::AHashMap;
 
 use crate::app::AppContext;
 use crate::mcp::{all_doc_entries, scripts::load_resource_by_http};
-use crate::rag::{chunk_markdown, Bm25Index, DocIndex, IndexedChunk};
+use crate::rag::{chunk_markdown, DocIndex, IndexedChunk};
 
 /// A document as fetched from GitHub, with the hash used to decide whether
 /// anything actually changed since the last poll.
@@ -89,17 +89,11 @@ pub fn has_changes(known: &AHashMap<&'static str, u64>, fetched: &[FetchedDoc]) 
 /// Chunks and embeds the fetched documents. This is the expensive half - it is
 /// only reached when `has_changes` says something moved.
 pub async fn build_index(app: &Arc<AppContext>, docs: &[FetchedDoc]) -> Result<DocIndex, String> {
-    let settings = app.get_settings();
-
     let mut chunks: Vec<IndexedChunk> = Vec::new();
     let mut documents_indexed = 0usize;
 
     for doc in docs {
-        let raw_chunks = chunk_markdown(
-            &doc.content,
-            settings.max_chunk_chars,
-            settings.min_chunk_chars,
-        );
+        let raw_chunks = chunk_markdown(&doc.content);
 
         if raw_chunks.is_empty() {
             continue;
@@ -135,7 +129,7 @@ pub async fn build_index(app: &Arc<AppContext>, docs: &[FetchedDoc]) -> Result<D
         })
         .collect();
 
-    let vectors = app.embedder.embed_passages(passages.clone()).await?;
+    let vectors = app.embedder.embed_passages(passages).await?;
 
     if vectors.len() != chunks.len() {
         return Err(format!(
@@ -145,87 +139,5 @@ pub async fn build_index(app: &Arc<AppContext>, docs: &[FetchedDoc]) -> Result<D
         ));
     }
 
-    // BM25 is built from exactly the same passage strings the vectors were
-    // built from, so the two rankings address identical chunks by index.
-    let bm25 = Bm25Index::build(&passages);
-
-    Ok(DocIndex::new(chunks, vectors, bm25, documents_indexed))
-}
-
-/// One poll cycle: fetch, hash, and hand a rebuild to the events loop if it is
-/// warranted. Shared by the timer and by the `rebuild_index` tool so both take
-/// exactly the same path.
-///
-/// `force` skips the hash comparison - that is what makes a manual rebuild
-/// useful after a chunking setting changed, since the documents themselves did
-/// not move and the hashes would say there is nothing to do.
-pub async fn poll_and_maybe_rebuild(app: &Arc<AppContext>, force: bool) -> PollOutcome {
-    if app.index_is_rebuilding() {
-        return PollOutcome::AlreadyRebuilding;
-    }
-
-    let docs = fetch_all_docs().await;
-
-    if docs.is_empty() {
-        my_logger::LOGGER.write_error(
-            "rag::poll_and_maybe_rebuild",
-            "No documents could be fetched - keeping the previous index".to_string(),
-            None.into(),
-        );
-
-        return PollOutcome::NothingFetched;
-    }
-
-    let documents = docs.len();
-
-    // A missing index means the previous rebuild failed (or this is the first
-    // pass), so rebuild even when the hashes look unchanged.
-    let index_missing = app.get_index().is_none();
-
-    let changed = {
-        let indexed_hashes = app.indexed_hashes.lock();
-        has_changes(&indexed_hashes, &docs)
-    };
-
-    if !force && !index_missing && !changed {
-        return PollOutcome::NoChanges { documents };
-    }
-
-    if !app.try_begin_index_rebuild() {
-        return PollOutcome::AlreadyRebuilding;
-    }
-
-    app.rebuild_index_events_loop.send(docs);
-
-    PollOutcome::RebuildStarted { documents }
-}
-
-pub enum PollOutcome {
-    RebuildStarted { documents: usize },
-    NoChanges { documents: usize },
-    AlreadyRebuilding,
-    NothingFetched,
-}
-
-impl PollOutcome {
-    pub fn describe(&self) -> String {
-        match self {
-            Self::RebuildStarted { documents } => format!(
-                "Rebuild started for {} documents. It runs in the background - \
-                 call search_docs in a moment and check the build timestamp in the status.",
-                documents
-            ),
-            Self::NoChanges { documents } => format!(
-                "No rebuild needed: all {} documents are unchanged since the current index \
-                 was built. Pass force=true to rebuild anyway.",
-                documents
-            ),
-            Self::AlreadyRebuilding => {
-                "A rebuild is already running - nothing was started.".to_string()
-            }
-            Self::NothingFetched => {
-                "No documents could be fetched; the previous index was kept.".to_string()
-            }
-        }
-    }
+    Ok(DocIndex::new(chunks, vectors, documents_indexed))
 }

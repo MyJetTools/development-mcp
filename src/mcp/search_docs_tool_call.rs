@@ -4,7 +4,7 @@ use mcp_server_middleware::*;
 use serde::{Deserialize, Serialize};
 
 use crate::app::AppContext;
-use crate::rag::SearchMode;
+use crate::rag::{DEFAULT_TOP_K, MAX_TOP_K, MIN_SCORE};
 
 #[derive(ApplyJsonSchema, Debug, Serialize, Deserialize)]
 pub struct SearchDocsInputData {
@@ -15,11 +15,6 @@ pub struct SearchDocsInputData {
 
     #[property(description = "How many chunks to return. Defaults to 6, maximum 15.")]
     pub top_k: Option<i32>,
-
-    #[property(
-        description = "Ranking to use: 'dense' (embeddings), 'bm25' (lexical), or 'hybrid' (both, fused). Omit for the server default."
-    )]
-    pub mode: Option<String>,
 }
 
 #[derive(ApplyJsonSchema, Debug, Serialize, Deserialize)]
@@ -104,40 +99,26 @@ impl McpToolCall<SearchDocsInputData, SearchDocsResponse> for SearchDocsHandler 
             });
         };
 
-        let settings = self.app.get_settings();
-
         let top_k = model
             .top_k
-            .unwrap_or(settings.default_top_k)
-            .clamp(1, settings.max_top_k) as usize;
+            .unwrap_or(DEFAULT_TOP_K)
+            .clamp(1, MAX_TOP_K) as usize;
 
-        let mode = match model.mode.as_deref() {
-            None => settings.search_mode,
-            Some(value) => SearchMode::parse(value)
-                .ok_or_else(|| format!("Unknown mode '{}'. Use dense, bm25 or hybrid.", value))?,
-        };
+        let query_vector = self.app.embedder.embed_query(query).await?;
 
-        // The embedding is only needed by the rankings that use it.
-        let query_vector = match mode {
-            SearchMode::Bm25 => Vec::new(),
-            _ => self.app.embedder.embed_query(query).await?,
-        };
-
-        let hits = index.search(mode, &query_vector, query, top_k, &settings);
+        let hits = index.search(&query_vector, top_k, MIN_SCORE);
 
         let status = if hits.is_empty() {
             format!(
-                "No fragment in the guides matched this query in {} mode (searched {} chunks \
-                 from {} documents). Treat this as 'the guides do not cover it'.",
-                mode.as_str(),
+                "No fragment in the guides matched this query (searched {} chunks from {} documents). \
+                 Treat this as 'the guides do not cover it'.",
                 index.chunks_amount(),
                 index.documents_indexed
             )
         } else {
             format!(
-                "{} fragment(s) found in {} mode across {} indexed chunks (index built at {}).",
+                "{} fragment(s) found across {} indexed chunks (index built at {}).",
                 hits.len(),
-                mode.as_str(),
                 index.chunks_amount(),
                 index.built_at.to_rfc3339()
             )

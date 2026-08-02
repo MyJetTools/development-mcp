@@ -8,7 +8,7 @@
 /// snippet is never mistaken for a heading, and so that an oversized section is
 /// never split in the middle of a fence.
 
-
+use crate::rag::{MAX_CHUNK_CHARS, MIN_CHUNK_CHARS};
 
 pub struct RawChunk {
     /// Breadcrumb of the headings this chunk sits under,
@@ -124,7 +124,7 @@ fn split_into_sections(content: &str) -> Vec<Section> {
 
 /// Splits an oversized section into several chunks along blank lines, never
 /// cutting inside a fenced code block.
-fn split_oversized(heading_path: &str, body: &str, max_chunk_chars: usize) -> Vec<RawChunk> {
+fn split_oversized(heading_path: &str, body: &str) -> Vec<RawChunk> {
     let mut result = Vec::new();
 
     let mut buffer: Vec<String> = Vec::new();
@@ -157,7 +157,7 @@ fn split_oversized(heading_path: &str, body: &str, max_chunk_chars: usize) -> Ve
 
         let is_break_point = !inside_fence && line.trim().is_empty();
 
-        if is_break_point && buffer_len >= max_chunk_chars {
+        if is_break_point && buffer_len >= MAX_CHUNK_CHARS {
             flush(&mut buffer, &mut buffer_len);
             continue;
         }
@@ -173,7 +173,7 @@ fn split_oversized(heading_path: &str, body: &str, max_chunk_chars: usize) -> Ve
 
 /// Merges chunks that are too small to carry meaning on their own into the
 /// next chunk sharing the same document.
-fn merge_tiny(chunks: Vec<RawChunk>, min_chunk_chars: usize) -> Vec<RawChunk> {
+fn merge_tiny(chunks: Vec<RawChunk>) -> Vec<RawChunk> {
     let mut result: Vec<RawChunk> = Vec::with_capacity(chunks.len());
 
     let mut pending: Option<RawChunk> = None;
@@ -184,7 +184,7 @@ fn merge_tiny(chunks: Vec<RawChunk>, min_chunk_chars: usize) -> Vec<RawChunk> {
             chunk.heading_path = prev.heading_path;
         }
 
-        if chunk.text.len() < min_chunk_chars {
+        if chunk.text.len() < MIN_CHUNK_CHARS {
             pending = Some(chunk);
             continue;
         }
@@ -207,7 +207,7 @@ fn merge_tiny(chunks: Vec<RawChunk>, min_chunk_chars: usize) -> Vec<RawChunk> {
     result
 }
 
-pub fn chunk_markdown(content: &str, max_chunk_chars: usize, min_chunk_chars: usize) -> Vec<RawChunk> {
+pub fn chunk_markdown(content: &str) -> Vec<RawChunk> {
     let sections = split_into_sections(content);
 
     let mut chunks = Vec::new();
@@ -220,7 +220,7 @@ pub fn chunk_markdown(content: &str, max_chunk_chars: usize, min_chunk_chars: us
             continue;
         }
 
-        if body.len() <= max_chunk_chars {
+        if body.len() <= MAX_CHUNK_CHARS {
             chunks.push(RawChunk {
                 heading_path: section.heading_path,
                 text: body.to_string(),
@@ -228,10 +228,10 @@ pub fn chunk_markdown(content: &str, max_chunk_chars: usize, min_chunk_chars: us
             continue;
         }
 
-        chunks.extend(split_oversized(&section.heading_path, body, max_chunk_chars));
+        chunks.extend(split_oversized(&section.heading_path, body));
     }
 
-    merge_tiny(chunks, min_chunk_chars)
+    merge_tiny(chunks)
 }
 
 #[cfg(test)]
@@ -242,7 +242,7 @@ mod tests {
     fn heading_inside_code_fence_is_not_a_heading() {
         let content = "# Title\n\nSome intro text that is long enough to matter for the chunker to keep it around as its own chunk, and then some.\n\n```bash\n# this is a comment, not a heading\necho hello\n```\n";
 
-        let chunks = chunk_markdown(content, 2400, 220);
+        let chunks = chunk_markdown(content);
 
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0].heading_path, "Title");
@@ -258,7 +258,7 @@ mod tests {
             body, body, body
         );
 
-        let chunks = chunk_markdown(&content, 2400, 220);
+        let chunks = chunk_markdown(&content);
 
         let paths: Vec<&str> = chunks.iter().map(|it| it.heading_path.as_str()).collect();
 

@@ -3,12 +3,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ahash::AHashMap;
-use arc_swap::{ArcSwap, ArcSwapOption};
+use arc_swap::ArcSwapOption;
 use parking_lot::Mutex;
 use rust_extensions::events_loop::EventsLoop;
 use rust_extensions::AppStates;
 
-use crate::rag::{DocIndex, Embedder, FetchedDoc, RuntimeSettings, REBUILD_ITERATION_TIMEOUT_SECS};
+use crate::rag::{DocIndex, Embedder, FetchedDoc, REBUILD_ITERATION_TIMEOUT_SECS};
 
 pub const APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 pub const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
@@ -32,10 +32,6 @@ pub struct AppContext {
     pub indexed_hashes: Mutex<AHashMap<&'static str, u64>>,
 
     pub rebuild_index_events_loop: EventsLoop<Vec<FetchedDoc>>,
-
-    /// Tunables that can be changed at runtime through the settings tools.
-    /// Read on every search, written only when somebody deliberately tunes it.
-    settings: ArcSwap<RuntimeSettings>,
 }
 
 impl AppContext {
@@ -49,7 +45,6 @@ impl AppContext {
             rebuild_index_events_loop: EventsLoop::new("RebuildDocsIndex").set_iteration_timeout(
                 Duration::from_secs(REBUILD_ITERATION_TIMEOUT_SECS),
             ),
-            settings: ArcSwap::from_pointee(RuntimeSettings::default()),
         }
     }
 
@@ -67,14 +62,6 @@ impl AppContext {
         self.index_rebuild_in_progress
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::Relaxed)
             .is_ok()
-    }
-
-    pub fn get_settings(&self) -> Arc<RuntimeSettings> {
-        self.settings.load_full()
-    }
-
-    pub fn set_settings(&self, settings: RuntimeSettings) {
-        self.settings.store(Arc::new(settings));
     }
 
     pub fn index_rebuild_finished(&self) {

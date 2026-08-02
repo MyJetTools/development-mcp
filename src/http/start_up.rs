@@ -95,12 +95,6 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(SearchDocsHandler::new(app.clone())));
     mcp.register_tool_call(Arc::new(GetDocHandler::new(app.clone())));
 
-    // Tuning and reindexing over MCP, so an experiment is a tool call rather
-    // than a release.
-    mcp.register_tool_call(Arc::new(GetSearchSettingsHandler::new(app.clone())));
-    mcp.register_tool_call(Arc::new(UpdateSearchSettingsHandler::new(app.clone())));
-    mcp.register_tool_call(Arc::new(RebuildIndexHandler::new(app.clone())));
-
     // The poll timer only fetches and hashes; anything expensive is handed to
     // the events loop, whose iteration timeout is sized for a full rebuild.
     app.rebuild_index_events_loop
