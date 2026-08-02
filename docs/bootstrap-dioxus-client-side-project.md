@@ -935,6 +935,14 @@ if __name__ == "__main__":
 
 Tag trigger: `your-project-name-*`. Two jobs: build (in `dioxus-docker` container) and publish (Docker image to GHCR).
 
+> **This is the whole CI story for a Dioxus WASM client — use the workflow below verbatim.**
+> The pre-baked builder image from the app-bootstrap guide (`{service-name}-build-docker`,
+> `build-{service-name}-docker.yaml`) is for **native Rust monorepo services only**. It does not
+> apply here: this build runs `dx build --release --web` with its own toolchain inside
+> `myjettools/dioxus-docker`, which already ships the toolchain the build needs. Do not add a
+> builder-image workflow, a `docker pull`/warm-cold pair of steps, or `CARGO_TARGET_DIR` juggling to
+> a Dioxus client project.
+
 ```yaml
 name: Release App
 on:

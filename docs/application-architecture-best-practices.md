@@ -487,6 +487,22 @@ fn main() {
 }
 ```
 
+Each monorepo service owns **two** hand-written workflow files, not one:
+
+- `.github/workflows/release-{service-name}.yaml` — triggers on tag `{service-name}-*`, builds
+  inside the pre-baked builder image and pushes the runtime image (~2 min)
+- `.github/workflows/build-{service-name}-docker.yaml` — `workflow_dispatch` only, bakes the
+  dependency graph into `ghcr.io/{org}/{service-name}-build-docker:latest` (~10 min, run by hand
+  whenever the graph moves)
+
+`Cargo.lock` must be committed for a monorepo service — un-ignore it in `.gitignore`. Without a
+committed lock, CI resolves fresh every run and the builder image stops matching.
+
+**Never hand-write these two files from memory** — fetch the exact templates and the load-bearing
+rules with `get_app_bootstrap_guide` (CI / GitHub Actions section). Details like `CARGO_HOME` living
+outside `/src` and the builder base matching the runtime base are what make the difference between a
+2-minute build and a 10-minute one, and getting them wrong fails silently.
+
 ---
 
 ## gRPC Client Pattern

@@ -577,7 +577,8 @@ This skill is decision-only. For implementation API surface, fetch from the `bes
 
 | Topic | Tool |
 |---|---|
-| Project bootstrap, Dockerfile/CI templates, NoSQL reader/writer wiring, TLS rules | `get_app_bootstrap_guide` |
+| Project bootstrap, Dockerfile, CI / GitHub Actions workflows (single-repo `ci-utils`, monorepo release + pre-baked builder image), NoSQL reader/writer wiring, TLS rules | `get_app_bootstrap_guide` |
+| Cutting a release: tags, `gh` commands, re-deploy, re-baking the builder image, troubleshooting a run | `get_release_guide` |
 | HTTP action structure, input/output models, errors, cookies, IP, file uploads | `get_http_actions_design_guide` |
 | gRPC server macros, client macros, streaming patterns, telemetry | `get_my_grpc_extensions_readme` |
 | MyNoSQL entity design, expirations, reader callbacks, anti-patterns | `get_my_no_sql_entity_patterns` |

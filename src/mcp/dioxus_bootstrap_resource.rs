@@ -8,7 +8,10 @@ impl DioxusBootstrapResource {
     pub const URL: &'static str =
         "https://raw.githubusercontent.com/amigin/ai-templates/refs/heads/main/cursor/bootstrap-empty-dioxus-fullstack-project.mdc";
     pub const TOOL_FN: &'static str = "get_dioxus_bootstrap_guide";
-    pub const TOOL_DESCRIPTION: &'static str = "Fetch Dioxus bootstrap guide resource content";
+    pub const TOOL_DESCRIPTION: &'static str =
+        "Fetch the Dioxus fullstack bootstrap guide: empty project skeleton, Cargo.toml/Dioxus.toml, \
+         build.rs CSS compilation, module layout — and how CI is generated for it (ci-utils \
+         CiGenerator with as_dioxus_fullstack_service for a single repo).";
 }
 
 impl ResourceDefinition for DioxusBootstrapResource {

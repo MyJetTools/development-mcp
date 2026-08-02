@@ -131,6 +131,36 @@ fn main() {
 
 **NEVER** edit `public/assets/app.css` directly — it is auto-generated on every build. Always add or edit CSS in the `css/` directory. To add new styles, create a new numbered file (e.g. `02-layout.css`) and register it in `build.rs`.
 
+## CI / GitHub Actions
+
+**Always ask the user:** *"Should I create a CI workflow for this project?"*
+
+If yes and the project is its own GitHub repo, `ci-utils` generates both the Dockerfile and the
+workflow — add the `CiGenerator` call to the same `build.rs` that compiles the CSS:
+
+```rust
+fn main() {
+    CiGenerator::new(env!("CARGO_PKG_NAME"))
+        .as_dioxus_fullstack_service()
+        .generate_github_ci_file()
+        .build();
+
+    ci_utils::css::CssCompiler::new("./css")
+        .add_file("01-common.css")
+        .add_file("99-desktop.css")
+        .compile("./public/assets/app.css");
+}
+```
+
+Then run `cargo build` once — it writes `.github/workflows/release.yaml` and `Dockerfile`. Commit
+both. Never hand-edit a generated file: the next `cargo build` overwrites it.
+
+If the project lives in a **monorepo**, do not use `CiGenerator` — the workflow is written by hand.
+Fetch the CI section of the app-bootstrap guide (`get_app_bootstrap_guide`) for the templates; note
+that the pre-baked builder image described there is for native Rust services, while a Dioxus build
+runs inside the `myjettools/dioxus-docker` container instead (see the Dioxus client-side bootstrap
+guide for that workflow).
+
 ## Main.rs Structure
 
 The `src/main.rs` should have this structure:
