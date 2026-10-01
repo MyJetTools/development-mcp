@@ -418,7 +418,7 @@ impl AppContext {
     ) -> Self {
         Self {
             // Generic type inferred from field type
-            instruments_reader: service_context.get_ns_reader().await,
+            instruments_reader: service_context.get_ns_reader(),
             // ...
         }
     }
@@ -428,11 +428,10 @@ impl AppContext {
 ### Reading data
 
 ```rust
-// Get all in partition → Option<Vec<(String, Arc<T>)>>
-// Tuple: (row_key, entity)
+// Get all in partition → Option<BTreeMap<String, Arc<T>>>
+// Key: row_key, value: entity
 let items = app.instruments_reader
-    .get_by_partition_key(InstrumentEntity::PARTITION_KEY)
-    .await;
+    .get_by_partition_key(InstrumentEntity::PARTITION_KEY);
 
 if let Some(entities) = items {
     for (row_key, entity) in entities {
@@ -442,15 +441,14 @@ if let Some(entities) = items {
 
 // Get single entity → Option<Arc<T>>
 let entity = app.instruments_reader
-    .get_entity("partition_key", "row_key")
-    .await;
+    .get_entity("partition_key", "row_key");
 ```
 
-**CRITICAL:** `get_by_partition_key` returns `Option<Vec<(String, Arc<T>)>>` — tuple with row_key, NOT `Vec<Arc<T>>`.
+**CRITICAL:** `get_by_partition_key` returns `Option<BTreeMap<String, Arc<T>>>` — keyed by row_key, NOT `Vec<Arc<T>>`.
 
 ### First snapshot — no manual wait
 
-`service_context.start_application()` starts the MyNoSql connection first and waits until every reader obtained through `get_ns_reader` has received its first snapshot; only then it starts timers, Service Bus, HTTP and gRPC. Do **not** call `wait_until_first_data_arrives()` on these readers. Before `start_application()` a reader is empty. Details: `get_application_architecture_best_practices` → "Initial Snapshot — service-sdk waits for it".
+`service_context.start_application()` starts the MyNoSql connection first and waits until every reader obtained through `get_ns_reader` has received its first snapshot; only then it starts timers and the queues, events loops and background executors created through `service_context`, then Service Bus, HTTP and gRPC. Do **not** call `wait_until_first_data_arrives()` on these readers. Before `start_application()` a reader is empty. Details: `get_application_architecture_best_practices` → "Initial Snapshot — service-sdk waits for it".
 
 ---
 
@@ -578,8 +576,7 @@ Always use `serde::Serialize`, `serde::Deserialize` (fully qualified).
 service_sdk::my_no_sql_sdk::reader        → MyNoSqlDataReaderTcp<T>
 service_sdk::my_no_sql_sdk::data_writer   → MyNoSqlDataWriter<T>, MyNoSqlDataWriterWithRetries<T>,
                                              MyNoSqlWriterSettings, CreateTableParams
-service_sdk::my_no_sql_sdk::abstractions  → DataSynchronizationPeriod
-service_sdk::my_no_sql_sdk::core          → MyNoSqlEntity trait
+service_sdk::my_no_sql_sdk::abstractions  → DataSynchronizationPeriod, MyNoSqlEntity trait
 ```
 
 ---

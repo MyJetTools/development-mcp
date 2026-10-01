@@ -211,7 +211,7 @@ The first axis is **stateless vs stateful**; the second is **environment** (prod
 
 ### Publisher: queue-backed, infallible
 
-Every publisher wraps an internal in-memory queue. From the caller's perspective, `publish()` **never fails** — no `Result<_, PublishError>`, no retries at the call site, no fallback. Business logic stays linear and unconcerned.
+The queue-backed publisher is `PublisherWithInternalQueue` (`service_context.get_sb_publisher_with_internal_queue()`) — it wraps an internal in-memory queue. From the caller's perspective, `publish_and_forget()` **never fails** on delivery — it only enqueues, and its `Result<_, PublishError>` is `Err` only when the message cannot be serialized; no retries at the call site, no fallback. Business logic stays linear and unconcerned. `MyServiceBusPublisher` (`get_sb_publisher(do_retries)`) is **not** queue-backed — its `publish().await` returns `Result<_, PublishError>`.
 
 > **Accepted tech-debt:** if the service restarts before the queue drains, unsent events are lost. Track this on a project's tech-debt log; do not solve it per-feature with bespoke retry — fixes belong in shared publisher infrastructure.
 
@@ -450,7 +450,7 @@ Hard rules:
 - Entity defs in the shared entities crate only. **Never** duplicate across crates.
 - Writer always via `.with_retries(N).method()`. Direct writer calls are an anti-pattern.
 - Reader reads are **sync** (no `.await`). Only `wait_until_first_data_arrives` is async.
-- Do not call `wait_until_first_data_arrives` yourself — `service_context.start_application()` waits for the first snapshot of every reader from `get_ns_reader` before it starts timers, Service Bus, HTTP and gRPC. A service whose MyNoSQL server is unreachable does not start (no `/api/isalive`).
+- Do not call `wait_until_first_data_arrives` yourself — `service_context.start_application()` waits for the first snapshot of every reader from `get_ns_reader` before it starts timers and the queues, events loops and background executors created through `service_context`, then Service Bus, HTTP and gRPC. A service whose MyNoSQL server is unreachable does not start (no `/api/isalive`).
 - `reader.get_by_partition_key` returns `Option<BTreeMap<String, Arc<T>>>` (key = row_key). Use `_as_vec` for just values.
 - Reader callbacks: **full reload pattern**, always `tokio::spawn` inside the callback. Never incremental.
 
@@ -464,14 +464,19 @@ Pattern:
 3. Background handler drains the queue and batches writes to Postgres / NoSQL.
 4. Client request returns as soon as state is mutated and key is enqueued. No blocking I/O under the lock.
 
+Wiring:
+- Create the queue with `service_context.create_queue_to_save_with_id(...)` and keep the returned `Arc<QueueToSaveWithId<Key, Payload>>` in `AppContext`.
+- Register the handler (`register_events_handler`) before `start_application()` — a queue without one panics when it is started.
+- Do not start the queue yourself — `start_application()` does it, and a second `start()` panics.
+
 ## Cache policy — pick one of four
 
 | Pattern | When |
 |---|---|
 | Mutex + persist queue | Write-frequent local state; source of truth in memory; persistence is best-effort durability. |
-| In-memory hydrated from MyNoSQL on startup (readers are loaded once `start_application()` returns) | Service consumes a stream and must apply on top of persisted history. |
+| In-memory hydrated from MyNoSQL on startup (readers are loaded before `start_application()` starts anything else) | Service consumes a stream and must apply on top of persisted history. |
 | Read-through (no local cache) | Rarely-read state where staleness is unacceptable. |
-| Write-through (`.with_retries(3).insert_or_replace`) | Service rarely reads but must publish state visible to others immediately. |
+| Write-through (`.with_retries(3).insert_or_replace_entity`) | Service rarely reads but must publish state visible to others immediately. |
 
 ## Hot path constraints
 
@@ -553,8 +558,8 @@ If any of these apply in a concrete project, the auth model needs explicit desig
 
 ## Anti-patterns (universal)
 
-- Calling MyNoSQL writer methods directly (`writer.insert_or_replace`). Always via `.with_retries(N)`.
-- Returning `Result<_, PublishError>` from a `publish()` call. Publishers are queue-backed and infallible from the caller's POV — propagating a fake error type pollutes business code.
+- Calling MyNoSQL writer methods directly (`writer.insert_or_replace_entity`). Always via `.with_retries(N)`.
+- Propagating `Result<_, PublishError>` from a publish call into business code. `PublisherWithInternalQueue::publish_and_forget()` only enqueues and can fail solely on serialization; `MyServiceBusPublisher::publish()` does return `Result<_, PublishError>` — log it and continue, do not propagate it.
 - Wiring up a SB subscriber without explicitly choosing `TopicQueueType`. Defaulting to `DeleteOnDisconnect` for state-bearing logic = silent data loss on reconnect.
 - Awaiting MyNoSQL reader read methods. They are sync.
 - Duplicating entity structs across services. Always shared crate.

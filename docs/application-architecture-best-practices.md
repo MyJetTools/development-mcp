@@ -1024,8 +1024,8 @@ impl AppContext {
     pub async fn new(settings_reader: Arc<SettingsReader>, service_context: &ServiceContext) -> Self {
         Self {
             // Generic type is inferred from the field type — no explicit annotation needed
-            sessions_reader: service_context.get_ns_reader().await,
-            asset_pairs_dict: service_context.get_ns_reader().await,
+            sessions_reader: service_context.get_ns_reader(),
+            asset_pairs_dict: service_context.get_ns_reader(),
         }
     }
 }
@@ -1035,8 +1035,8 @@ impl AppContext {
 
 | What | Source |
 |---|---|
-| `MyServiceBusPublisher<T>` | `service_ctx.get_sb_publisher(true).await` |
-| `MyNoSqlDataReaderTcp<T>` | `service_ctx.get_ns_reader().await` |
+| `MyServiceBusPublisher<T>` | `service_ctx.get_sb_publisher(true)` |
+| `MyNoSqlDataReaderTcp<T>` | `service_ctx.get_ns_reader()` |
 | gRPC client | `XxxGrpcClient::new(settings_reader.clone())` |
 | DB repo | `XxxRepo::new(settings_reader.clone()).await` |
 
@@ -1047,7 +1047,7 @@ impl AppContext {
 
 `MyNoSqlDataReaderTcp` connects via TCP and receives a table snapshot asynchronously. Between creating the reader and receiving the first snapshot, there is a delay. If you read data before the snapshot arrives — you get empty results.
 
-`service_context.start_application()` closes that gap for you. It starts the MyNoSql connection first and waits until every reader handed out by `get_ns_reader` has received its first snapshot. Only then is the app marked as initialized and everything else started — background timers, the Service Bus client, the HTTP and gRPC servers. So no request, message or timer tick ever runs against a table that is not loaded yet.
+`service_context.start_application()` closes that gap for you. It starts the MyNoSql connection first and waits until every reader handed out by `get_ns_reader` has received its first snapshot. Only then is the app marked as initialized and everything else started — background timers and the queues, events loops and background executors created through `service_context`, then the Service Bus client and the HTTP and gRPC servers. So no request, message, timer tick or handler of those queues, events loops and background executors ever runs against a table that is not loaded yet.
 
 ```rust
 // ✅ CORRECT — gRPC/HTTP handler, SB subscriber, timer tick: the snapshot is already there
@@ -1062,11 +1062,11 @@ let instruments = app.instruments_reader.get_by_partition_key("i");
 
 What follows from that wait:
 
-- **Before `start_application()` the readers are empty** — the connection is not started yet. Nothing can be read from a reader inside `AppContext::new()` or anywhere in `main.rs` above `start_application()`; the first read is possible once it returns. Calling `wait_until_first_data_arrives()` before `start_application()` hangs forever.
+- **Before `start_application()` the readers are empty** — the connection is not started yet. Nothing can be read from a reader inside `AppContext::new()` or anywhere in `main.rs` above `start_application()`. `start_application()` returns only on shutdown, so the first read is possible inside a handler, a subscriber or a timer tick — not on the line after `start_application().await`. Calling `wait_until_first_data_arrives()` before `start_application()` hangs forever.
 - While the wait lasts the HTTP port is closed, `/api/isalive` included. A service whose MyNoSql server is unreachable never becomes alive.
 - There is no timeout. Every 5 seconds the console prints which table is still being waited for: `MyNoSql readers are not initialized: table '<table>' has no data yet - start of application is delayed`.
 - An empty or not yet created table does not block the start — the server answers the subscription with an empty snapshot.
-- Only readers obtained through `get_ns_reader` are waited for. A reader taken directly from `service_context.my_no_sql_connection` is not — that is the one case where you call `wait_until_first_data_arrives()` yourself, after `start_application()`.
+- Only readers obtained through `get_ns_reader` are waited for. A reader taken directly from `service_context.my_no_sql_connection` is not — that is the one case where you call `wait_until_first_data_arrives()` yourself, in the handler, subscriber or timer tick that reads it first.
 
 ---
 
@@ -1214,7 +1214,7 @@ service_context.start_application().await;
 - `next_message.engage_telemetry().await` — ALWAYS before calling scripts/flows
 - Subscriber delegates to `scripts/` (not `flows/`) — there is no HTTP/gRPC context here
 - NEVER business logic directly in `handle_messages` — routing and telemetry only
-- `while let Some(mut next_message)` — always `mut`, required for `take_message()` and `engage_telemetry()`
+- `while let Some(mut next_message)` — always `mut`, required for `take_message()`
 - Filter by type (`sb_msg.tp`) in subscriber — different types → different script calls
 
 ### Error Handling in Service Bus
@@ -1232,7 +1232,7 @@ app.posts_repo.update(post).await.expect("posts: update failed");
 **SB publish failure inside handler → log and continue**:
 ```rust
 // ✅ CORRECT — data is already in DB, losing an SB message is non-critical
-if let Err(err) = app.publisher.publish_messages(items).await {
+if let Err(err) = app.publisher.publish_messages(items.iter().map(|i| (i, None))).await {
     my_logger::LOGGER.write_error(
         "recalculate_likes",
         format!("{:?}", err),
@@ -1242,7 +1242,7 @@ if let Err(err) = app.publisher.publish_messages(items).await {
 // continue — do NOT panic, do NOT return error
 
 // ❌ WRONG
-app.publisher.publish_messages(items).await.expect("publish failed");  // kills already-completed work
+app.publisher.publish_messages(items.iter().map(|i| (i, None))).await.expect("publish failed");  // kills already-completed work
 ```
 
 **Logging** — always with telemetry context from `engage_telemetry()`:
