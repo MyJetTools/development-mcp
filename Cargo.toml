@@ -36,4 +36,6 @@ serde_json = "*"
 
 async-trait = "*"
 
-flurl = { tag = "0.7.0", git = "https://github.com/MyJetTools/fl-url.git" }
+flurl = { tag = "0.7.0", git = "https://github.com/MyJetTools/fl-url.git", features = [
+    "with-rust-tls",
+] }

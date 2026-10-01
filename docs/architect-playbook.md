@@ -450,6 +450,7 @@ Hard rules:
 - Entity defs in the shared entities crate only. **Never** duplicate across crates.
 - Writer always via `.with_retries(N).method()`. Direct writer calls are an anti-pattern.
 - Reader reads are **sync** (no `.await`). Only `wait_until_first_data_arrives` is async.
+- Do not call `wait_until_first_data_arrives` yourself — `service_context.start_application()` waits for the first snapshot of every reader from `get_ns_reader` before it starts timers, Service Bus, HTTP and gRPC. A service whose MyNoSQL server is unreachable does not start (no `/api/isalive`).
 - `reader.get_by_partition_key` returns `Option<BTreeMap<String, Arc<T>>>` (key = row_key). Use `_as_vec` for just values.
 - Reader callbacks: **full reload pattern**, always `tokio::spawn` inside the callback. Never incremental.
 
@@ -468,7 +469,7 @@ Pattern:
 | Pattern | When |
 |---|---|
 | Mutex + persist queue | Write-frequent local state; source of truth in memory; persistence is best-effort durability. |
-| In-memory hydrated from MyNoSQL on startup (`wait_until_first_data_arrives`) | Service consumes a stream and must apply on top of persisted history. |
+| In-memory hydrated from MyNoSQL on startup (readers are loaded once `start_application()` returns) | Service consumes a stream and must apply on top of persisted history. |
 | Read-through (no local cache) | Rarely-read state where staleness is unacceptable. |
 | Write-through (`.with_retries(3).insert_or_replace`) | Service rarely reads but must publish state visible to others immediately. |
 

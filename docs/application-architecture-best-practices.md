@@ -1043,22 +1043,30 @@ impl AppContext {
 **NEVER** store `ServiceContext` in `AppContext`.
 `service_ctx` lives in `main.rs` until `start_application()` is called — used to register SB subscribers after AppContext is created.
 
-### Waiting for Initial Snapshot — CRITICAL
+### Initial Snapshot — service-sdk waits for it
 
 `MyNoSqlDataReaderTcp` connects via TCP and receives a table snapshot asynchronously. Between creating the reader and receiving the first snapshot, there is a delay. If you read data before the snapshot arrives — you get empty results.
 
-Method `wait_until_first_data_arrives()` blocks until the first snapshot is received:
+`service_context.start_application()` closes that gap for you. It starts the MyNoSql connection first and waits until every reader handed out by `get_ns_reader` has received its first snapshot. Only then is the app marked as initialized and everything else started — background timers, the Service Bus client, the HTTP and gRPC servers. So no request, message or timer tick ever runs against a table that is not loaded yet.
 
 ```rust
-// ✅ CORRECT — wait for snapshot before reading
-app.instruments_reader.wait_until_first_data_arrives().await;
-let instruments = app.instruments_reader.get_by_partition_key("i").await;
+// ✅ CORRECT — gRPC/HTTP handler, SB subscriber, timer tick: the snapshot is already there
+let instruments = app.instruments_reader.get_by_partition_key("i");
 
-// ❌ WRONG — reading immediately, data may be empty
-let instruments = app.instruments_reader.get_by_partition_key("i").await;
+// ❌ WRONG — redundant, service-sdk has already waited for this reader
+app.instruments_reader.wait_until_first_data_arrives().await;
+let instruments = app.instruments_reader.get_by_partition_key("i");
 ```
 
-**ALWAYS** call `wait_until_first_data_arrives()` before the first read from a reader (typically in `scripts/init.rs`).
+**NEVER** call `wait_until_first_data_arrives()` on a reader obtained through `get_ns_reader`.
+
+What follows from that wait:
+
+- **Before `start_application()` the readers are empty** — the connection is not started yet. Nothing can be read from a reader inside `AppContext::new()` or anywhere in `main.rs` above `start_application()`; the first read is possible once it returns. Calling `wait_until_first_data_arrives()` before `start_application()` hangs forever.
+- While the wait lasts the HTTP port is closed, `/api/isalive` included. A service whose MyNoSql server is unreachable never becomes alive.
+- There is no timeout. Every 5 seconds the console prints which table is still being waited for: `MyNoSql readers are not initialized: table '<table>' has no data yet - start of application is delayed`.
+- An empty or not yet created table does not block the start — the server answers the subscription with an empty snapshot.
+- Only readers obtained through `get_ns_reader` are waited for. A reader taken directly from `service_context.my_no_sql_connection` is not — that is the one case where you call `wait_until_first_data_arrives()` yourself, after `start_application()`.
 
 ---
 

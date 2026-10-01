@@ -448,6 +448,10 @@ let entity = app.instruments_reader
 
 **CRITICAL:** `get_by_partition_key` returns `Option<Vec<(String, Arc<T>)>>` — tuple with row_key, NOT `Vec<Arc<T>>`.
 
+### First snapshot — no manual wait
+
+`service_context.start_application()` starts the MyNoSql connection first and waits until every reader obtained through `get_ns_reader` has received its first snapshot; only then it starts timers, Service Bus, HTTP and gRPC. Do **not** call `wait_until_first_data_arrives()` on these readers. Before `start_application()` a reader is empty. Details: `get_application_architecture_best_practices` → "Initial Snapshot — service-sdk waits for it".
+
 ---
 
 ## MyNoSql Writer (add only when the service needs to write to MyNoSql)
