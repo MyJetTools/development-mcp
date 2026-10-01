@@ -510,9 +510,11 @@ When sketching a new service's dependencies:
 | `my-nosql-sdk` | Only entity macros (no I/O). |
 | `my-nosql-data-reader-sdk` | Service reads MyNoSQL state via TCP reader. |
 | `my-nosql-data-writer-sdk` | Service writes MyNoSQL state via HTTP writer. |
-| `with-tls` | Service connects to `wss://` (Binance, exchange feeds). Without it: rustls panic at runtime. |
+| `with-ring-tls` | Service connects to `wss://` (Binance, exchange feeds) or calls anything over `https://`. Without it: rustls panic at runtime. |
+| `with-postgres-tls` | Postgres over TLS (only together with `postgres`). |
 | `with-telemetry` | Propagate telemetry context across gRPC. |
-| `with-ssh` | gRPC over SSH tunnel. |
+| `with-ssh` | gRPC / Postgres / MyNoSQL / HTTP over SSH tunnel. |
+| `with-prometheus-metrics` | Service must expose `/metrics`. |
 
 ## Transport decisions
 

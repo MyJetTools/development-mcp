@@ -6,7 +6,7 @@ pub struct MyTcpSocketsResource;
 impl MyTcpSocketsResource {
     pub const FILENAME: &'static str = "my-tcp-sockets-readme.md";
     pub const URL: &'static str =
-        "https://raw.githubusercontent.com/MyJetTools/my-tcp-sockets/refs/heads/main/README.md";
+        "https://raw.githubusercontent.com/my-jet-tools/my-tcp-sockets/refs/heads/main/README.md";
     pub const TOOL_FN: &'static str = "get_my_tcp_sockets_readme";
     pub const TOOL_DESCRIPTION: &'static str = "Fetch my-tcp-sockets README resource content";
 }

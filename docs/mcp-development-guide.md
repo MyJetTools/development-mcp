@@ -464,7 +464,7 @@ http_server.add_middleware(Arc::new(mcp));
 Make sure these dependencies are in `Cargo.toml`:
 
 ```toml
-mcp-server-middleware = { tag = "0.8.3", git = "https://github.com/my-ai-utils/mcp-server-middleware.git" }
+mcp-server-middleware = { tag = "0.9.0", git = "https://github.com/my-ai-utils/mcp-server-middleware.git" }
 my-ai-agent = { tag = "0.1.0", git = "https://github.com/my-ai-utils/my-ai-agent.git", features = ["agent"] }
 async-trait = "*"
 serde = { version = "*", features = ["derive"] }

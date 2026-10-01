@@ -10,7 +10,8 @@ impl DioxusClientSideBootstrapResource {
     pub const TOOL_DESCRIPTION: &'static str =
         "Fetch Dioxus client-side (WASM-only) bootstrap guide: project skeleton with WebSocket and \
          API calls, plus the CI workflow for a Dioxus WASM app — dx build inside the \
-         myjettools/dioxus-docker container, cache-busting build.py, static-hosting Dockerfile. \
+         ghcr.io/my-jet-tools/dioxus-docker container, cache-busting build.py, static-hosting \
+         Dockerfile. \
          Load this before writing CI for any Dioxus client; the native-service builder-image \
          pattern does not apply to it.";
 }

@@ -178,7 +178,7 @@ networks:
     external: true
 ```
 
-Even though there's no API, the 4 volume mounts and the `UNIX_SOCKET=1` env stay — service-sdk's built-in `/api/isalive` and `/metrics` still serve on the unix socket, and operators can `curl --unix-socket ~/unix-sockets/<product>/http/<service-name> http://localhost/api/isalive` to probe liveness.
+Even though there's no API, the 4 volume mounts and the `UNIX_SOCKET=1` env stay — service-sdk's built-in `/api/isalive` (and `/metrics`, with the `with-prometheus-metrics` feature) still serve on the unix socket, and operators can `curl --unix-socket ~/unix-sockets/<product>/http/<service-name> http://localhost/api/isalive` to probe liveness.
 
 ## Gateway-service template (TCP exposed)
 

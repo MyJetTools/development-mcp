@@ -88,7 +88,7 @@ steps were skipped. If the cold steps ran, the pull failed — check that the im
 `PUBLISH_TOKEN` can read it.
 
 Dioxus WASM services (`dx build`) do not use the builder image at all — they build inside the
-`myjettools/dioxus-docker` container instead. See the Dioxus client-side bootstrap guide.
+`ghcr.io/my-jet-tools/dioxus-docker` container instead. See the Dioxus client-side bootstrap guide.
 
 ### Version extraction
 

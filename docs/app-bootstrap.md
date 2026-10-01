@@ -316,7 +316,7 @@ three seconds. A registry image has no ref scoping — written once, read by eve
 4. Release as usual. Confirm in the run that *Build (warm, …)* ran and the cold steps were skipped.
 
 **Not for Dioxus WASM builds** (`dashboards-ui` and friends) — own toolchain, own `dx build`, built
-inside the `myjettools/dioxus-docker` container instead. Different problem, different fix: see the
+inside the `ghcr.io/my-jet-tools/dioxus-docker` container instead. Different problem, different fix: see the
 Dioxus client-side bootstrap guide for that workflow.
 
 **Placeholders to replace:**
@@ -350,7 +350,7 @@ guide (`get_release_guide`).
 | Feature | What it enables |
 |---|---|
 | `default` | HTTP server, settings reader, logger, telemetry — the baseline every service needs. **Do not opt out.** |
-| `full` | Everything below. Convenient for prototyping, avoid in production crates. |
+| `full` | `macros`, `grpc`, `my-service-bus`, `postgres` and the three `my-nosql-*` features. Convenient for prototyping, avoid in production crates. **Never** includes the TLS, SSH or metrics features — those are always named explicitly. |
 | `macros` | Brings in the `use_settings!()`, `use_grpc_server!()`, `use_grpc_client!()`, `use_my_postgres!()`, `use_my_http_server!()`, `use_my_no_sql_entity!()` macros. **Almost always needed.** |
 | `grpc` | gRPC server + client stack. |
 | `my-service-bus` | SB publisher / subscriber. |
@@ -361,16 +361,18 @@ guide (`get_release_guide`).
 | `websockets` | Server-side WebSocket on top of the HTTP server. |
 | `http-static-files` | Mount a static-files directory through the HTTP server. |
 | `signal-r` | SignalR server (uncommon). |
-| `with-tls` | Required to make `wss://` outbound connections work — initialises the rustls crypto provider at startup. |
-| `with-ssh` | SSH tunnel support for Postgres / other TCP clients. |
-| `rustls` | Lower-level TLS plumbing (usually pulled in transitively by `with-tls`). |
+| `with-ring-tls` | rustls TLS with the **ring** crypto provider — installs the provider at startup. Required for `https://` through FlUrl, `wss://` outbound connections and TLS gRPC. The default choice. |
+| `with-rust-tls` | Same TLS with the pure-Rust provider (`rustls-graviola`): no C toolchain, but x86_64/aarch64 only. Pick it only when dropping the C toolchain is the point. |
+| `with-postgres-tls` | TLS for Postgres (openssl — a separate stack from the two above). No-op unless `postgres` is on. |
+| `with-ssh` | SSH tunnels for gRPC, FlUrl, MyNoSql and Postgres. |
+| `with-prometheus-metrics` | The `/metrics` endpoint plus HTTP / gRPC request metrics. Without it nothing is reported to Prometheus. |
 
 ### Common gotcha
 
 There is **no `http-server` feature**. The HTTP server is part of `default`. A typical REST-only service should be:
 
 ```toml
-service-sdk = { tag = "0.4.2", git = "https://github.com/MyJetTools/service-sdk.git", features = [
+service-sdk = { tag = "0.5.0", git = "https://github.com/MyJetTools/service-sdk.git", features = [
     "macros",
 ] }
 ```
@@ -588,12 +590,14 @@ service_sdk::my_no_sql_sdk::core          → MyNoSqlEntity trait
 
 ---
 
-## TLS Feature (required for `wss://` WebSocket connections)
+## TLS Feature (required for `https://` and `wss://` connections)
 
-If the service connects to external WebSocket endpoints over `wss://` (e.g. Binance, exchange feeds), the `with-tls` feature **must** be enabled in `service-sdk`. Without it, the rustls `CryptoProvider` is not initialized and the service will panic at runtime.
+If the service connects to external WebSocket endpoints over `wss://` (e.g. Binance, exchange feeds) or calls anything over `https://`, the `with-ring-tls` feature **must** be enabled in `service-sdk`. Without it, no TLS stack is linked, the rustls `CryptoProvider` is not initialized and the service will panic at runtime.
 
 ```toml
-service-sdk = { ..., features = ["with-tls"] }
+service-sdk = { ..., features = ["with-ring-tls"] }
 ```
 
-**Rule:** any service that uses `my-web-socket-client` with `wss://` URLs → add `"with-tls"` to service-sdk features.
+`with-rust-tls` is the same TLS with a pure-Rust crypto provider — pick exactly one of the two, `with-ring-tls` by default. Neither is part of `full`.
+
+**Rule:** any service that uses `my-web-socket-client` with `wss://` URLs → add `"with-ring-tls"` to service-sdk features. The same applies when the Seq, telemetry or settings URL is `https://` — those always go through FlUrl.

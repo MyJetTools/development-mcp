@@ -11,7 +11,7 @@ For browser/WASM WebSocket connections see **bootstrap-dioxus-client-side-projec
 
 ```toml
 [dependencies]
-my-web-socket-client = { tag = "0.2.0", git = "https://github.com/MyJetTools/my-web-socket-client.git" }
+my-web-socket-client = { tag = "0.1.0", git = "https://github.com/my-jet-tools/my-web-socket-client.git" }
 rust-extensions = { tag = "0.1.5", git = "https://github.com/MyJetTools/rust-extensions.git" }
 tokio = { version = "*", features = ["full"] }
 async-trait = "*"

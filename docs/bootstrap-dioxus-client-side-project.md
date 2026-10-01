@@ -886,10 +886,10 @@ pub fn RenderDialog() -> Element {
 
 ## Dockerfile — Static Hosting
 
-Client-side Dioxus compiles to static WASM + HTML + JS + CSS. Use `myjettools/web-app-host` to serve:
+Client-side Dioxus compiles to static WASM + HTML + JS + CSS. Use `ghcr.io/my-jet-tools/web-app-host` to serve:
 
 ```dockerfile
-FROM myjettools/web-app-host:0.1.1
+FROM ghcr.io/my-jet-tools/web-app-host:0.1.0
 ARG BUILD_VERSION
 ENV BUILD_VERSION=$BUILD_VERSION
 
@@ -939,7 +939,7 @@ Tag trigger: `your-project-name-*`. Two jobs: build (in `dioxus-docker` containe
 > The pre-baked builder image from the app-bootstrap guide (`{service-name}-build-docker`,
 > `build-{service-name}-docker.yaml`) is for **native Rust monorepo services only**. It does not
 > apply here: this build runs `dx build --release --web` with its own toolchain inside
-> `myjettools/dioxus-docker`, which already ships the toolchain the build needs. Do not add a
+> `ghcr.io/my-jet-tools/dioxus-docker`, which already ships the toolchain the build needs. Do not add a
 > builder-image workflow, a `docker pull`/warm-cold pair of steps, or `CARGO_TARGET_DIR` juggling to
 > a Dioxus client project.
 
@@ -960,7 +960,7 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     container:
-      image: myjettools/dioxus-docker:0.7.3
+      image: ghcr.io/my-jet-tools/dioxus-docker:0.7.10
     steps:
       - uses: actions/checkout@v6.0.2
       - uses: actions-rs/toolchain@v1
@@ -1051,7 +1051,7 @@ dx build --package your-project-name
 7. **Pre-auth vs post-auth pages** — controlled by `LocationState` and `with_ws` flag on `App` component
 8. **CSS compiled by `build.rs`** — source in `css/`, output in `public/assets/app.css`. **NEVER** edit `app.css` directly
 9. **Favicon required** — `public/favicon.ico`
-10. **Docker image** — `myjettools/web-app-host:0.1.1` serves static files from `./wwwroot`
+10. **Docker image** — `ghcr.io/my-jet-tools/web-app-host:0.1.0` serves static files from `./wwwroot`
 11. **Wire models live in `rest-api-shared`** — request models (`MyHttpInput`) and response models (`Serialize, Deserialize, MyHttpObjectStructure, Clone, Debug, PartialEq`) are defined once and shared verbatim by the REST-API server and the client; the client depends on the crate **without** the `server` feature. `src/models/` keeps only client view-state
 12. **Centralize HTTP handling** — every API function forwards FlUrl's raw `Result<FlUrlResponse, FlUrlError>` to `handle_http_response` / `handle_http_empty` / `handle_http_response_opt` in `api/mod.rs`; no per-call status checks
 13. **Parameter-less requests use `EmptyRequestModel`** — don't declare an empty `MyHttpInput` model just to satisfy `execute_request`
