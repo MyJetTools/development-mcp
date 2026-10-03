@@ -593,7 +593,7 @@ service_sdk::my_no_sql_sdk::abstractions  → DataSynchronizationPeriod, MyNoSql
 
 ## TLS Feature (required for `https://` and `wss://` connections)
 
-If the service connects to external WebSocket endpoints over `wss://` (e.g. Binance, exchange feeds) or calls anything over `https://`, the `with-ring-tls` feature **must** be enabled in `service-sdk`. Without it, no TLS stack is linked, the rustls `CryptoProvider` is not initialized and the service will panic at runtime.
+If the service connects to external WebSocket endpoints over `wss://` (e.g. Binance, exchange feeds) or calls anything over `https://`, the `with-ring-tls` feature **must** be enabled in `service-sdk`. Without it no rustls `CryptoProvider` is installed, and TLS fails at the first connection: FlUrl answers an `https://` request with `FlUrlError::UnsupportedScheme`, and `my-web-socket-client` panics when it opens a `wss://` connection — rustls finds no provider to build its client config with.
 
 ```toml
 service-sdk = { ..., features = ["with-ring-tls"] }
