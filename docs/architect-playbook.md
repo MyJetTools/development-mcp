@@ -223,6 +223,15 @@ Drain `MessagesReader` into a `Vec`, persist the batch first, then apply to in-m
 
 When designing any subscriber, the architect MUST consciously pick `TopicQueueType` and document why. This is not a default — it changes durability, fan-out, and replay semantics.
 
+`TopicQueueType` is the kind of queue the Service Bus server keeps for the subscriber. In code it is not an argument: `register_sb_subscribe(callback, delete_on_no_subscribers, single_connection)` takes two flags, and the client turns them into the queue type (`TopicQueueType::from_flags`):
+
+| `TopicQueueType` | `delete_on_no_subscribers` | `single_connection` |
+|---|---|---|
+| `Permanent` | `false` | `false` |
+| `PermanentWithSingleConnection` | `false` | `true` |
+| `DeleteOnDisconnect` | `true` | `false` |
+| `DeleteOnDisconnectWithSingleConnection` | `true` | `true` |
+
 **Step 0 — answer the deployment-cardinality question first.** The same `TopicQueueType` value behaves differently depending on whether the service runs in one copy or several. Without knowing cardinality, the choice is a guess.
 
 | Deployment | Default safe pick | What goes wrong with the alternatives |
