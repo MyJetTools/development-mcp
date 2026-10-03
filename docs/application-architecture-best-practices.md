@@ -560,23 +560,36 @@ grpc_client/users.rs: crate_ns: "crate::users_grpc"
 // grpc_server/likes_grpc_service.rs
 service_sdk::macros::use_grpc_server!();  // ← ALWAYS first
 
-generate_server!(proto_file:"./proto/Likes.proto", crate_ns: "crate::likes_grpc",);
+generate_server!(
+    proto_file: "./proto/Likes.proto",
+    crate_ns: "crate::likes_grpc",
+    with_telemetry: true  // every handler gets `ctx: &MyTelemetryContext` as its last argument
+);
 
 // 1. Simple request → response (trivial logic → inline in handler)
-async fn get_amount(app: &Arc<AppContext>, request: GetAmountGrpcRequest) -> GetAmountGrpcResponse {
-    let amount = app.likes_repo.get_count_by_object(request.tp, &request.object_id).await;
+async fn get_amount(
+    app: &Arc<AppContext>,
+    request: GetAmountGrpcRequest,
+    ctx: &my_telemetry::MyTelemetryContext,
+) -> GetAmountGrpcResponse {
+    let amount = app.likes_repo.get_count_by_object(request.tp, &request.object_id, ctx).await;
     GetAmountGrpcResponse { amount }
 }
 
 // 2. Streaming input → delegate to flow
-async fn like_unlike(app: &Arc<AppContext>, request: StreamedRequestReader<LikeUnlikeGrpcRequest>) {
-    crate::flows::like_unlike(app, request).await;
+async fn like_unlike(
+    app: &Arc<AppContext>,
+    request: StreamedRequestReader<LikeUnlikeGrpcRequest>,
+    ctx: &my_telemetry::MyTelemetryContext,
+) {
+    crate::flows::like_unlike(app, request, ctx).await;
 }
 
 // 3. Streaming output → tokio::spawn + flow with producer
 async fn get_user_likes(
     app: &Arc<AppContext>,
     request: GetUserLikesGrpcRequest,
+    _ctx: &my_telemetry::MyTelemetryContext,
 ) -> StreamedResponseWriter<GetUserLikesGrpcResponse> {
     let response_writer = StreamedResponseWriter::new(1024);
     let producer = response_writer.get_stream_producer();
@@ -618,7 +631,7 @@ When to delegate to flow vs inline:
 - One repo/gRPC call + simple mapping → inline in handler
 - Multiple calls, business logic, conditions → flow
 
-**ALWAYS** `#[with_telemetry]` on every gRPC server handler.
+**ALWAYS** `with_telemetry: true` on `generate_server!` — it reads the telemetry context from the request and passes it to every handler as the last argument (`ctx: &MyTelemetryContext`); pass it on to repos and gRPC clients. The `#[with_telemetry]` attribute is for handwritten tonic handlers only, and it does not compile on a `generate_server!` handler (it looks for `let request = request.into_inner()` in the body) — see `get_my_grpc_extensions_readme`.
 **NEVER** `tokio::spawn` for non-streaming handlers (await directly).
 
 ### Error Handling in gRPC
@@ -627,7 +640,7 @@ When to delegate to flow vs inline:
 > in the response (None = not found, empty list = empty result). Panicking on IO is correct —
 > the gRPC server catches it, returns status INTERNAL, and logs it.
 
-**Business errors → optional response fields**, not panic and not Result:
+**Business errors → optional response fields**, not panic and not Result (unless the service declares `with_error: true` on `generate_server!` — then unary handlers return `Result<T, GrpcError>` and the error reaches the client as a gRPC status; see `get_my_grpc_extensions_readme`):
 ```rust
 // ✅ CORRECT — None means "not found", the client understands this
 async fn get_user(app: &Arc<AppContext>, request: GetUserGrpcRequest) -> GetUserGrpcResponse {
@@ -646,7 +659,7 @@ let user = app.users_repo.get(&request.user_id).await
 
 **Logging in gRPC handlers** — via telemetry context, not directly through `my_logger::LOGGER`:
 ```rust
-// ctx comes from #[with_telemetry] — logs are automatically bound to the request
+// ctx comes from generate_server!(…, with_telemetry: true) — logs are automatically bound to the request
 async fn get_order(app: &Arc<AppContext>, request: GetOrderGrpcRequest, ctx: &MyTelemetryContext)
     -> GetOrderGrpcResponse {
     let result = app.orders_repo.get(&request.order_id, ctx).await;
