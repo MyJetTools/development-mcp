@@ -354,7 +354,7 @@ guide (`get_release_guide`).
 | `macros` | Brings in the `use_settings!()`, `use_grpc_server!()`, `use_grpc_client!()`, `use_my_postgres!()`, `use_my_http_server!()`, `use_my_no_sql_entity!()` macros. **Almost always needed.** |
 | `grpc` | gRPC server + client stack. |
 | `my-service-bus` | SB publisher / subscriber. |
-| `postgres` | `my-postgres` re-exports + `PostgresSettings` trait auto-impl via `SdkSettingsTraits`. |
+| `postgres` | `my-postgres` re-exports + `PostgresSettings` trait auto-impl for `SettingsReader` via `AutoGenerateSettingsTraits` (field `postgres_conn_string`). |
 | `my-nosql-data-reader-sdk` | TCP reader for MyNoSql. |
 | `my-nosql-data-writer-sdk` | HTTP writer for MyNoSql. |
 | `my-nosql-sdk` | Entity macros only (no reader, no writer). |
@@ -398,7 +398,7 @@ pub struct SettingsModel {
 }
 ```
 
-`SdkSettingsTraits` derive auto-generates the trait impl for `ServiceContext`.
+The `AutoGenerateSettingsTraits` derive implements `MyNoSqlTcpConnectionSettings` for `SettingsReader` from this field. (`SdkSettingsTraits` generates only `ServiceInfo`.)
 
 ### AppContext — add reader field
 
