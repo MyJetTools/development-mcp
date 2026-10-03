@@ -417,7 +417,7 @@ order_book_subscribers/
 
 ```rust
 // settings.rs
-use service_sdk::macros::use_settings!();  // ← ALWAYS first
+service_sdk::macros::use_settings!();  // ← ALWAYS first
 
 #[derive(
     my_settings_reader::SettingsModel,
@@ -1260,7 +1260,7 @@ Read `HTTP Actions Design Guide` from MCP before writing HTTP actions.
 
 ```rust
 // http_server/controllers/{group}/{action_name}_action.rs
-use service_sdk::macros::use_my_http_server!();
+service_sdk::macros::use_my_http_server!();
 
 #[http_route(
     method: "POST",
