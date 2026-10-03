@@ -1036,7 +1036,7 @@ impl AppContext {
 | What | Source |
 |---|---|
 | `MyServiceBusPublisher<T>` | `service_ctx.get_sb_publisher(true)` |
-| `MyNoSqlDataReaderTcp<T>` | `service_ctx.get_ns_reader()` |
+| `Arc<MyNoSqlDataReaderTcp<T>>` | `service_ctx.get_ns_reader()` |
 | gRPC client | `XxxGrpcClient::new(settings_reader.clone())` |
 | DB repo | `XxxRepo::new(settings_reader.clone()).await` |
 
