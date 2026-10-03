@@ -36,6 +36,7 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(MySshResource));
     mcp.register_resource(Arc::new(MyTcpSocketsResource));
     mcp.register_resource(Arc::new(RustExtensionsResource));
+    mcp.register_resource(Arc::new(ServiceSdkResource));
     mcp.register_resource(Arc::new(DioxusDesignPatternsResource));
     mcp.register_resource(Arc::new(DioxusFullstackPatternsResource));
     mcp.register_resource(Arc::new(MyNoSqlEntityPatternsResource));
@@ -66,6 +67,7 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(MySshReadmeTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(MyTcpSocketsReadmeTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(RustExtensionsReadmeTool::new(app.clone())));
+    mcp.register_tool_call(Arc::new(ServiceSdkReadmeTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(DioxusDesignPatternsTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(DioxusFullstackPatternsTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(MyNoSqlEntityPatternsTool::new(app.clone())));

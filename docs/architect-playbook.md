@@ -585,6 +585,7 @@ This skill is decision-only. For implementation API surface, fetch from the `bes
 
 | Topic | Tool |
 |---|---|
+| `ServiceContext`: startup order, timers, queues, events loops, background executors, HTTP / gRPC / NoSQL / Service Bus / Postgres wiring | `get_service_sdk_readme` |
 | Project bootstrap, Dockerfile, CI / GitHub Actions workflows (single-repo `ci-utils`, monorepo release + pre-baked builder image), NoSQL reader/writer wiring, TLS rules | `get_app_bootstrap_guide` |
 | Cutting a release: tags, `gh` commands, re-deploy, re-baking the builder image, troubleshooting a run | `get_release_guide` |
 | HTTP action structure, input/output models, errors, cookies, IP, file uploads | `get_http_actions_design_guide` |

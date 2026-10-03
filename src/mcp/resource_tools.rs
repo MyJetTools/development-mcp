@@ -157,6 +157,7 @@ pub fn all_doc_entries() -> Vec<DocCatalogEntry> {
         doc_entry!(MySshResource),
         doc_entry!(MyTcpSocketsResource),
         doc_entry!(RustExtensionsResource),
+        doc_entry!(ServiceSdkResource),
         doc_entry!(DioxusDesignPatternsResource),
         doc_entry!(DioxusFullstackPatternsResource),
         doc_entry!(MyNoSqlEntityPatternsResource),
@@ -198,6 +199,7 @@ fn all_resource_tools() -> Vec<ResourceToolInfo> {
         tool_info!(MySshResource),
         tool_info!(MyTcpSocketsResource),
         tool_info!(RustExtensionsResource),
+        tool_info!(ServiceSdkResource),
         tool_info!(DioxusDesignPatternsResource),
         tool_info!(DioxusFullstackPatternsResource),
         tool_info!(MyNoSqlEntityPatternsResource),
@@ -257,6 +259,7 @@ define_resource_tool!(CargoDependenciesGuideTool, CargoDependenciesResource);
 define_resource_tool!(MySshReadmeTool, MySshResource);
 define_resource_tool!(MyTcpSocketsReadmeTool, MyTcpSocketsResource);
 define_resource_tool!(RustExtensionsReadmeTool, RustExtensionsResource);
+define_resource_tool!(ServiceSdkReadmeTool, ServiceSdkResource);
 define_resource_tool!(DioxusDesignPatternsTool, DioxusDesignPatternsResource);
 define_resource_tool!(DioxusFullstackPatternsTool, DioxusFullstackPatternsResource);
 define_resource_tool!(MyNoSqlEntityPatternsTool, MyNoSqlEntityPatternsResource);

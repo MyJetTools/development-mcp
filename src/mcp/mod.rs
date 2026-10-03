@@ -19,6 +19,8 @@ mod my_tcp_sockets_resource;
 pub use my_tcp_sockets_resource::*;
 mod rust_extensions_resource;
 pub use rust_extensions_resource::*;
+mod service_sdk_resource;
+pub use service_sdk_resource::*;
 mod dioxus_design_patterns_resource;
 pub use dioxus_design_patterns_resource::*;
 mod dioxus_fullstack_patterns_resource;
