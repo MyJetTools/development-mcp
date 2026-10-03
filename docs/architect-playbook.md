@@ -461,7 +461,7 @@ Hard rules:
 - Reader reads are **sync** (no `.await`). Only `wait_until_first_data_arrives` is async.
 - Do not call `wait_until_first_data_arrives` yourself — `service_context.start_application()` waits for the first snapshot of every reader from `get_ns_reader` before it starts timers and the queues, events loops and background executors created through `service_context`, then Service Bus, HTTP and gRPC. A service whose MyNoSQL server is unreachable does not start (no `/api/isalive`).
 - `reader.get_by_partition_key` returns `Option<BTreeMap<String, Arc<T>>>` (key = row_key). Use `_as_vec` for just values.
-- Reader callbacks: **full reload pattern**, always `tokio::spawn` inside the callback. Never incremental.
+- Reader callbacks: **full reload pattern**, always `tokio::spawn` inside the callback. Never incremental. Such a cache is filled **after** the reader — until it has been loaded once, read from the reader (`get_my_no_sql_entity_patterns`, «The cache is filled after the reader»).
 
 ### In-memory + persist queue (hot path)
 
@@ -483,7 +483,7 @@ Wiring:
 | Pattern | When |
 |---|---|
 | Mutex + persist queue | Write-frequent local state; source of truth in memory; persistence is best-effort durability. |
-| In-memory hydrated from MyNoSQL on startup (readers are loaded before `start_application()` starts anything else) | Service consumes a stream and must apply on top of persisted history. |
+| In-memory hydrated from MyNoSQL on startup (readers are loaded before `start_application()` starts anything else; a cache filled from reader callbacks lags behind them — read from the reader until it is loaded once) | Service consumes a stream and must apply on top of persisted history. |
 | Read-through (no local cache) | Rarely-read state where staleness is unacceptable. |
 | Write-through (`.with_retries(3).insert_or_replace_entity`) | Service rarely reads but must publish state visible to others immediately. |
 

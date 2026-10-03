@@ -1067,6 +1067,7 @@ What follows from that wait:
 - There is no timeout. Every 5 seconds the console prints which table is still being waited for: `MyNoSql readers are not initialized: table '<table>' has no data yet - start of application is delayed`.
 - An empty or not yet created table does not block the start — the server answers the subscription with an empty snapshot.
 - Only readers obtained through `get_ns_reader` are waited for. A reader taken directly from `service_context.my_no_sql_connection` is not — that is the one case where you call `wait_until_first_data_arrives()` yourself, in the handler, subscriber or timer tick that reads it first.
+- A cache filled from a reader callback is not covered either. The wait ends when the reader's own copy of the table is loaded; the callbacks registered with `assign_callback` are delivered after that, one at a time, from the reader's own events loop, and the full-reload pattern adds a `tokio::spawn` on top. So the first request, message or timer tick can find such a cache empty. Until the cache has been loaded once, read from the reader — it holds the data by then (`get_my_no_sql_entity_patterns`, «The cache is filled after the reader»).
 
 ---
 
