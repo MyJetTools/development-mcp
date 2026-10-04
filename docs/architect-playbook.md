@@ -310,7 +310,7 @@ SB models go in the shared contracts crate (e.g. `my-sb-contracts`). Never inlin
 
 | | Output | Consumer access | Recovery model |
 |---|---|---|---|
-| **Bounded** (fits in memory of every consumer) | MyNoSQL replicated cache | TCP reader, sync local, lock-free | Consumers always see last-known-good even if read-model service is down |
+| **Bounded** (fits in memory of every consumer) | MyNoSQL replicated cache | TCP reader, sync local read (a short `parking_lot` mutex on the in-memory copy, no I/O) | Consumers always see last-known-good even if read-model service is down |
 | **Unbounded** (doesn't fit) | Postgres in the read-model service | gRPC with filters/pagination | Consumers depend on the read-model service availability |
 
 Architect must **size the projection first** before any other design step on a read-model. Output mode determines storage choice, consumer pattern, recovery semantics, deployment cardinality.
