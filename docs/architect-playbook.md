@@ -527,9 +527,10 @@ When sketching a new service's dependencies:
 | `my-nosql-data-writer-sdk` | Service writes MyNoSQL state via HTTP writer. |
 | `with-ring-tls` or `with-rust-tls` | One decision for the whole service — **ask the user**: no TLS, or TLS on one of the two. TLS is needed when the service connects to `wss://` (Binance, exchange feeds) or calls anything over `https://`. Without it a `wss://` connection panics in rustls and an `https://` request through FlUrl fails with `FlUrlError::UnsupportedScheme`. |
 | `with-postgres-tls` | Postgres over TLS (only together with `postgres`). |
-| `with-telemetry` | Propagate telemetry context across gRPC. |
 | `with-ssh` | gRPC / Postgres / MyNoSQL / HTTP over SSH tunnel. |
 | `with-prometheus-metrics` | Service must expose `/metrics`. |
+
+Telemetry needs no feature: service-sdk always turns on `with-telemetry` of my-grpc-extensions, my-service-bus, my-http-server and my-postgres. A gRPC server hands the context to its handlers with `with_telemetry: true` on `generate_server!`.
 
 ## Transport decisions
 
@@ -547,7 +548,7 @@ When sketching a new service's dependencies:
 - Streaming input — collect via `request.into_vec().await` (no spawn).
 - Non-streaming — await directly (no spawn).
 - Clients via `#[generate_grpc_client]` with `retries`, `request_timeout_sec`, `ping_*`. Per-method overrides allowed.
-- When service-sdk pulls `with-telemetry`, every client method takes `&MyTelemetryContext` as second arg.
+- service-sdk always turns on `with-telemetry` of my-grpc-extensions, so every client method takes `&MyTelemetryContext` as second arg (`&MyTelemetryContext::Empty` where there is no context to pass on).
 
 ## Service-to-service auth
 
