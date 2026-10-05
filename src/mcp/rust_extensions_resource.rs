@@ -4,27 +4,30 @@ use mcp_server_middleware::*;
 use serde::{Deserialize, Serialize};
 
 use crate::app::AppContext;
-use crate::mcp::{fetch_resource_text, scripts::load_resource_by_http, ResourceToolResponse};
+use crate::mcp::{
+    fetch_resource_text, get_topic_name, scripts::load_resource_by_http, ResourceToolResponse,
+    RustExtensionsTopics,
+};
 
 pub struct RustExtensionsResource;
 
 impl RustExtensionsResource {
     pub const FILENAME: &'static str = "rust-extensions.md";
     pub const URL: &'static str =
-        "https://raw.githubusercontent.com/MyJetTools/rust-extensions/main/README.md";
+        "https://raw.githubusercontent.com/MyJetTools/rust-extensions/main/docs/index_resource.md";
     pub const TOOL_FN: &'static str = "get_rust_extensions_readme";
     pub const TOOL_DESCRIPTION: &'static str =
-        "Fetch rust-extensions docs. Without `topic` - the README: what the crate is and the list \
-         of topics. With `topic` (e.g. `events-loop`, `date-time`) - that topic in depth, with \
-         examples for every case";
+        "Fetch rust-extensions docs. Without `topic` - the index: what the crate is, its features \
+         and the list of topics with their Startable types. With `topic` (e.g. `events-loop`, \
+         `date-time`) - that topic in depth, with examples for every case";
 }
 
 impl ResourceDefinition for RustExtensionsResource {
     const RESOURCE_URI: &'static str = "resource://rust-extensions";
     const RESOURCE_NAME: &'static str = "rust-extensions for each project";
     const DESCRIPTION: &'static str =
-        "Low-level utils, queues and other helpers to glue together Rust code. The README is the \
-         index of topics; each topic is resource://rust-extensions/{topic}";
+        "Low-level utils, queues and other helpers to glue together Rust code. This resource is \
+         the index of topics; each topic is resource://rust-extensions/{topic}";
     const MIME_TYPE: &'static str = "text/markdown";
 }
 
@@ -70,20 +73,26 @@ impl McpResourceTemplateService for RustExtensionsTopicResource {
 
 const DOCS_URL: &str = "https://raw.githubusercontent.com/MyJetTools/rust-extensions/main/docs";
 
-const SEE_INDEX: &str = "The topics are listed in the rust-extensions README: \
+const SEE_INDEX: &str = "The topics are listed in the rust-extensions index: \
      resource://rust-extensions, or get_rust_extensions_readme without `topic`.";
 
-/// Loads `docs/{topic}.md`. The list of topics lives in the rust-extensions
-/// README only, so a new topic needs no release of this server.
-async fn load_topic(topic: &str) -> Result<String, ResourceTemplateReadError> {
-    // The topic goes into a URL path - nothing but a plain name may get there.
-    let is_name = !topic.is_empty()
+pub fn get_topic_uri(topic: &str) -> String {
+    format!("resource://rust-extensions/{}", topic)
+}
+
+/// The topic goes into a URL path - nothing but a plain name may get there.
+pub fn is_topic_name(topic: &str) -> bool {
+    !topic.is_empty()
         && topic.len() <= 64
         && topic
             .bytes()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+}
 
-    if !is_name {
+/// Loads `docs/{topic}.md`. The list of topics lives in the rust-extensions
+/// index only, so a new topic needs no release of this server.
+pub async fn load_topic(topic: &str) -> Result<String, ResourceTemplateReadError> {
+    if !is_topic_name(topic) {
         return Err(ResourceTemplateReadError::NotFound(format!(
             "`{}` is not a topic name. {}",
             topic, SEE_INDEX
@@ -121,18 +130,29 @@ async fn load_topic(topic: &str) -> Result<String, ResourceTemplateReadError> {
 #[derive(ApplyJsonSchema, Debug, Serialize, Deserialize)]
 pub struct RustExtensionsDocsInput {
     #[property(
-        description = "Topic to read, e.g. `events-loop` or `date-time` - the README lists them all. Omit it to get the README"
+        description = "Topic to read, e.g. `events-loop` or `date-time` - the index lists them all. Omit it to get the index"
     )]
     pub topic: Option<String>,
 }
 
 pub struct RustExtensionsReadmeTool {
     _app: Arc<AppContext>,
+    /// The topics of the index - the name and the description of every topic.
+    /// Kept fresh by the refresh timer, see [`Self::get_topics`].
+    topics: Arc<RustExtensionsTopics>,
 }
 
 impl RustExtensionsReadmeTool {
     pub fn new(app: Arc<AppContext>) -> Self {
-        Self { _app: app }
+        Self {
+            _app: app,
+            topics: Arc::new(RustExtensionsTopics::new()),
+        }
+    }
+
+    /// For [`start_rust_extensions_topics_refresh`], which fills the index.
+    pub fn get_topics(&self) -> Arc<RustExtensionsTopics> {
+        self.topics.clone()
     }
 }
 
@@ -163,10 +183,17 @@ impl McpToolCall<RustExtensionsDocsInput, ResourceToolResponse> for RustExtensio
             ResourceTemplateReadError::Internal(message) => message,
         })?;
 
+        // The index row of the topic gives its description. A topic the index
+        // did not list at the last refresh still gets its own name.
+        let resource_description = match self.topics.get(topic) {
+            Some(listed) => listed.get_description(),
+            None => RustExtensionsTopicResource::DESCRIPTION.to_string(),
+        };
+
         Ok(ResourceToolResponse {
-            uri: format!("resource://rust-extensions/{}", topic),
-            resource_name: RustExtensionsTopicResource::TEMPLATE_NAME.to_string(),
-            resource_description: RustExtensionsTopicResource::DESCRIPTION.to_string(),
+            uri: get_topic_uri(topic),
+            resource_name: get_topic_name(topic),
+            resource_description,
             mime_type: RustExtensionsTopicResource::MIME_TYPE.to_string(),
             text,
         })

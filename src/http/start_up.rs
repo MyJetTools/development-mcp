@@ -67,7 +67,8 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(CargoDependenciesGuideTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(MySshReadmeTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(MyTcpSocketsReadmeTool::new(app.clone())));
-    mcp.register_tool_call(Arc::new(RustExtensionsReadmeTool::new(app.clone())));
+    let rust_extensions_tool = Arc::new(RustExtensionsReadmeTool::new(app.clone()));
+    mcp.register_tool_call(rust_extensions_tool.clone());
     mcp.register_tool_call(Arc::new(ServiceSdkReadmeTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(DioxusDesignPatternsTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(DioxusFullstackPatternsTool::new(app.clone())));
@@ -94,7 +95,11 @@ pub async fn start(app: &Arc<AppContext>) {
     let controllers = Arc::new(super::builder::build_controllers(app));
     http_server.add_middleware(controllers);
 
-    http_server.add_middleware(Arc::new(mcp));
+    let mcp = Arc::new(mcp);
+    http_server.add_middleware(mcp.clone());
+
+    // Every topic of the rust-extensions README becomes a resource of its own.
+    start_rust_extensions_topics_refresh(rust_extensions_tool.get_topics(), &mcp);
 
     http_server.start(app.app_states.clone(), my_logger::LOGGER.clone());
 }
