@@ -186,20 +186,26 @@ impl<TDoc: TopicsDocDefinition> McpToolCall<TopicsDocInput, ResourceToolResponse
         model: TopicsDocInput,
     ) -> Result<ResourceToolResponse, String> {
         let Some(topic) = model.topic.as_deref().filter(|topic| !topic.is_empty()) else {
-            return fetch_resource_text(
-                TDoc::RESOURCE_URI,
-                TDoc::RESOURCE_NAME,
-                TDoc::DESCRIPTION,
-                TDoc::MIME_TYPE,
-                TDoc::URL,
-            )
-            .await;
+            return fetch_index::<TDoc>().await;
         };
 
-        let text = load_topic::<TDoc>(topic).await.map_err(|err| match err {
-            ResourceTemplateReadError::NotFound(message) => message,
-            ResourceTemplateReadError::Internal(message) => message,
-        })?;
+        let text = match load_topic::<TDoc>(topic).await {
+            Ok(text) => text,
+            // A topic the doc does not have is a normal request, not a failure:
+            // the answer is the index, whose table lists every topic.
+            Err(ResourceTemplateReadError::NotFound(_)) => {
+                let mut index = fetch_index::<TDoc>().await?;
+                let note = format!(
+                    "> There is no topic `{}` in {} - this is its index instead: the table \
+                     lists every topic.",
+                    topic,
+                    TDoc::TOPIC_NAME_PREFIX
+                );
+                index.text = prepend_note(index.text.as_str(), note.as_str());
+                return Ok(index);
+            }
+            Err(ResourceTemplateReadError::Internal(message)) => return Err(message),
+        };
 
         // The index row of the topic gives its description. A topic the index
         // did not list at the last refresh still gets its own name.
@@ -216,6 +222,31 @@ impl<TDoc: TopicsDocDefinition> McpToolCall<TopicsDocInput, ResourceToolResponse
             text,
         })
     }
+}
+
+async fn fetch_index<TDoc: TopicsDocDefinition>() -> Result<ResourceToolResponse, String> {
+    fetch_resource_text(
+        TDoc::RESOURCE_URI,
+        TDoc::RESOURCE_NAME,
+        TDoc::DESCRIPTION,
+        TDoc::MIME_TYPE,
+        TDoc::URL,
+    )
+    .await
+}
+
+/// Puts `note` in front of `doc` - after its front matter, which has to stay
+/// the first thing of the doc.
+fn prepend_note(doc: &str, note: &str) -> String {
+    if let Some(end) = doc
+        .strip_prefix("---\n")
+        .and_then(|rest| rest.find("\n---\n"))
+    {
+        let (front_matter, body) = doc.split_at("---\n".len() + end + "\n---\n".len());
+        return format!("{}{}\n\n{}", front_matter, note, body);
+    }
+
+    format!("{}\n\n{}", note, doc)
 }
 
 #[cfg(test)]
@@ -282,6 +313,20 @@ mod tests {
                 assert_ne!(doc.topic_name_prefix, other.topic_name_prefix);
             }
         }
+    }
+
+    #[test]
+    fn the_note_goes_after_the_front_matter() {
+        assert_eq!(
+            prepend_note("---\nalwaysApply: true\n---\n# Guide\n", "> note"),
+            "---\nalwaysApply: true\n---\n> note\n\n# Guide\n"
+        );
+        assert_eq!(prepend_note("# Guide\n", "> note"), "> note\n\n# Guide\n");
+        // A rule, not front matter: the doc does not start with it.
+        assert_eq!(
+            prepend_note("# Guide\n---\nx\n---\n", "> note"),
+            "> note\n\n# Guide\n---\nx\n---\n"
+        );
     }
 
     /// The index of a doc of this repo lists exactly the files of its folder,
