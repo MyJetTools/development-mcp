@@ -256,7 +256,8 @@ mod tests {
     use super::*;
     use crate::mcp::{
         parse_topics, AppBootstrapResource, ApplicationArchitectureResource,
-        ArchitectSkillResource, DioxusClientSideBootstrapResource, RustExtensionsResource,
+        ArchitectSkillResource, DioxusClientSideBootstrapResource, FlUrlResource,
+        HttpActionsResource, RustExtensionsResource,
     };
 
     /// The docs of this repo are served from its `main` branch.
@@ -285,6 +286,8 @@ mod tests {
 
     fn all_docs() -> Vec<Doc> {
         vec![
+            doc::<FlUrlResource>(),
+            doc::<HttpActionsResource>(),
             doc::<AppBootstrapResource>(),
             doc::<RustExtensionsResource>(),
             doc::<ArchitectSkillResource>(),

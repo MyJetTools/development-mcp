@@ -252,11 +252,10 @@ impl McpToolCall<EmptyToolInput, ResourceToolListResponse> for ListResourceTools
 
 // The docs split into topics (`TopicsDocDefinition`) take a `topic`: their
 // tools are `TopicsDocTool`, aliased next to each resource -
-// AppBootstrapGuideTool, RustExtensionsReadmeTool, ArchitectPlaybookTool,
-// DioxusClientSideBootstrapTool, ApplicationArchitectureTool.
+// FlUrlUsageGuideTool, HttpActionsDesignGuideTool, AppBootstrapGuideTool,
+// RustExtensionsReadmeTool, ArchitectPlaybookTool, DioxusClientSideBootstrapTool,
+// ApplicationArchitectureTool.
 define_resource_tool!(McpDevelopmentGuideTool, McpResource);
-define_resource_tool!(FlUrlUsageGuideTool, FlUrlResource);
-define_resource_tool!(HttpActionsDesignGuideTool, HttpActionsResource);
 define_resource_tool!(DioxusBootstrapGuideTool, DioxusBootstrapResource);
 define_resource_tool!(CargoDependenciesGuideTool, CargoDependenciesResource);
 define_resource_tool!(MySshReadmeTool, MySshResource);

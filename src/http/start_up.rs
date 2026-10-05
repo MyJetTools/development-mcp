@@ -29,7 +29,9 @@ pub async fn start(app: &Arc<AppContext>) {
 
     mcp.register_resource(Arc::new(McpResource));
     mcp.register_resource(Arc::new(FlUrlResource));
+    mcp.register_resource_template(Arc::new(FlUrlTopicResource::default()));
     mcp.register_resource(Arc::new(HttpActionsResource));
+    mcp.register_resource_template(Arc::new(HttpActionsTopicResource::default()));
     mcp.register_resource(Arc::new(AppBootstrapResource));
     mcp.register_resource_template(Arc::new(AppBootstrapTopicResource::default()));
     mcp.register_resource(Arc::new(DioxusBootstrapResource));
@@ -64,8 +66,10 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(MyWebSocketsWasmResource));
 
     mcp.register_tool_call(Arc::new(McpDevelopmentGuideTool::new(app.clone())));
-    mcp.register_tool_call(Arc::new(FlUrlUsageGuideTool::new(app.clone())));
-    mcp.register_tool_call(Arc::new(HttpActionsDesignGuideTool::new(app.clone())));
+    let flurl_tool = Arc::new(FlUrlUsageGuideTool::new(app.clone()));
+    mcp.register_tool_call(flurl_tool.clone());
+    let http_actions_tool = Arc::new(HttpActionsDesignGuideTool::new(app.clone()));
+    mcp.register_tool_call(http_actions_tool.clone());
     let app_bootstrap_tool = Arc::new(AppBootstrapGuideTool::new(app.clone()));
     mcp.register_tool_call(app_bootstrap_tool.clone());
     mcp.register_tool_call(Arc::new(DioxusBootstrapGuideTool::new(app.clone())));
@@ -109,6 +113,8 @@ pub async fn start(app: &Arc<AppContext>) {
 
     // Every topic of a doc split into topics becomes a resource of its own.
     let mut topics_refresh = TopicsRefreshTimer::new(&mcp);
+    topics_refresh.register(&flurl_tool);
+    topics_refresh.register(&http_actions_tool);
     topics_refresh.register(&app_bootstrap_tool);
     topics_refresh.register(&rust_extensions_tool);
     topics_refresh.register(&architect_playbook_tool);

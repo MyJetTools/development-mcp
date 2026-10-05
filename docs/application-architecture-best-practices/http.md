@@ -1,6 +1,6 @@
 # HTTP Action Pattern
 
-Read `HTTP Actions Design Guide` from MCP before writing HTTP actions. Its sections «Controller Registration» and «Server Startup» (`ControllersMiddleware`, `MyHttpServer`, `start_up.rs`) describe my-http-server used on its own — **not** how a service on service-sdk does it. In a service the SDK owns the server: actions are registered on the `HttpServerBuilder` given to `configure_http_server`, by value, before `start_application()`:
+Read `HTTP Actions Design Guide` from MCP before writing HTTP actions. Its topic `registration-and-startup` (`ControllersMiddleware`, `MyHttpServer`, `start_up.rs`) describes my-http-server used on its own — **not** how a service on service-sdk does it. In a service the SDK owns the server: actions are registered on the `HttpServerBuilder` given to `configure_http_server`, by value, before `start_application()`:
 
 ```rust
 // main.rs
