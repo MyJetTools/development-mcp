@@ -6,11 +6,12 @@ pub struct DioxusBootstrapResource;
 impl DioxusBootstrapResource {
     pub const FILENAME: &'static str = "dioxus-bootstrap.md";
     pub const URL: &'static str =
-        "https://raw.githubusercontent.com/amigin/ai-templates/refs/heads/main/cursor/bootstrap-empty-dioxus-fullstack-project.mdc";
+        "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/bootstrap-empty-dioxus-fullstack-project.md";
     pub const TOOL_FN: &'static str = "get_dioxus_bootstrap_guide";
     pub const TOOL_DESCRIPTION: &'static str =
         "Fetch the Dioxus fullstack bootstrap guide: empty project skeleton, Cargo.toml/Dioxus.toml, \
-         build.rs CSS compilation, module layout — and how CI is generated for it (ci-utils \
+         build.rs CSS compilation, module layout, the server module with gRPC clients, \
+         #[get]/#[post] server functions — and how CI is generated for it (ci-utils \
          CiGenerator with as_dioxus_fullstack_service for a single repo).";
 }
 
