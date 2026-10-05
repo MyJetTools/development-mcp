@@ -201,7 +201,7 @@ Otherwise the file is identical to the background-worker template above. These s
 
 ## How this fits with the rest of the stack
 
-- **Settings:** Always read via `SETTINGS_URL=http+unix://root/system-sockets/settings.http-sock:/settings/<product>/<service>`. See `application-architecture-best-practices` for the `SettingsReader` derive pattern that consumes this URL.
+- **Settings:** Always read via `SETTINGS_URL=http+unix://root/system-sockets/settings.http-sock:/settings/<product>/<service>`. See `get_application_architecture_best_practices`, topic `settings`, for the `SettingsReader` derive pattern that consumes this URL.
 - **Service Bus:** Each product runs its own SB broker. The unix-socket path to that broker is mounted under `/root/product-system-sockets/`. Cross-product SB is not standard — define a separate broker per product.
 - **Logger / telemetry:** Always system-level. The logger socket lives under `/root/system-sockets/` and the `seq_conn_string` setting points to it.
 - **Reverse proxy / TLS:** Sits in front and translates external HTTPS → internal HTTP. The reverse proxy's upstream connection can itself be a unix socket (when the upstream service is on the same host), so even gateway services can avoid TCP entirely. That's a separate concern; see the reverse-proxy doc.

@@ -72,9 +72,9 @@ gh release create {service-name}-{version} --title "{service-name}-{version}" --
 If the workflow file is not in the repo at the time the tag is created, GitHub will not trigger the build.
 
 Without 3 and 4 the release still succeeds — it just falls back to the cold build and takes ~10
-minutes instead of ~2. The full pattern, including both workflow files verbatim, is in the CI
-section of the app-bootstrap guide (`get_app_bootstrap_guide`) — generate them from there, do not
-improvise.
+minutes instead of ~2. The full pattern, including both workflow files verbatim, is in the
+app-bootstrap guide, topic `ci-monorepo` (`get_app_bootstrap_guide` with `topic`) — generate them
+from there, do not improvise.
 
 ### Re-baking the builder image (monorepo)
 

@@ -250,15 +250,17 @@ impl McpToolCall<EmptyToolInput, ResourceToolListResponse> for ListResourceTools
     }
 }
 
+// The docs split into topics (`TopicsDocDefinition`) take a `topic`: their
+// tools are `TopicsDocTool`, aliased next to each resource -
+// AppBootstrapGuideTool, RustExtensionsReadmeTool, ArchitectPlaybookTool,
+// DioxusClientSideBootstrapTool, ApplicationArchitectureTool.
 define_resource_tool!(McpDevelopmentGuideTool, McpResource);
 define_resource_tool!(FlUrlUsageGuideTool, FlUrlResource);
 define_resource_tool!(HttpActionsDesignGuideTool, HttpActionsResource);
-define_resource_tool!(AppBootstrapGuideTool, AppBootstrapResource);
 define_resource_tool!(DioxusBootstrapGuideTool, DioxusBootstrapResource);
 define_resource_tool!(CargoDependenciesGuideTool, CargoDependenciesResource);
 define_resource_tool!(MySshReadmeTool, MySshResource);
 define_resource_tool!(MyTcpSocketsReadmeTool, MyTcpSocketsResource);
-// RustExtensionsReadmeTool takes a `topic` - it lives next to its resource.
 define_resource_tool!(ServiceSdkReadmeTool, ServiceSdkResource);
 define_resource_tool!(DioxusDesignPatternsTool, DioxusDesignPatternsResource);
 define_resource_tool!(DioxusFullstackPatternsTool, DioxusFullstackPatternsResource);
@@ -269,17 +271,8 @@ define_resource_tool!(CiUtilsReadmeTool, CiUtilsResource);
 define_resource_tool!(MyPostgresReadmeTool, MyPostgresResource);
 define_resource_tool!(DioxusAdminUiKitTool, DioxusAdminUiKitResource);
 define_resource_tool!(RustFixReadmeTool, RustFixResource);
-define_resource_tool!(ArchitectPlaybookTool, ArchitectSkillResource);
-define_resource_tool!(
-    DioxusClientSideBootstrapTool,
-    DioxusClientSideBootstrapResource
-);
 define_resource_tool!(MyWebSocketClientTool, MyWebSocketClientResource);
 define_resource_tool!(ReleaseGuideTool, ReleaseGuideResource);
-define_resource_tool!(
-    ApplicationArchitectureTool,
-    ApplicationArchitectureResource
-);
 define_resource_tool!(
     PerformanceConsiderationsTool,
     PerformanceConsiderationsResource

@@ -31,12 +31,13 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(FlUrlResource));
     mcp.register_resource(Arc::new(HttpActionsResource));
     mcp.register_resource(Arc::new(AppBootstrapResource));
+    mcp.register_resource_template(Arc::new(AppBootstrapTopicResource::default()));
     mcp.register_resource(Arc::new(DioxusBootstrapResource));
     mcp.register_resource(Arc::new(CargoDependenciesResource));
     mcp.register_resource(Arc::new(MySshResource));
     mcp.register_resource(Arc::new(MyTcpSocketsResource));
     mcp.register_resource(Arc::new(RustExtensionsResource));
-    mcp.register_resource_template(Arc::new(RustExtensionsTopicResource));
+    mcp.register_resource_template(Arc::new(RustExtensionsTopicResource::default()));
     mcp.register_resource(Arc::new(ServiceSdkResource));
     mcp.register_resource(Arc::new(DioxusDesignPatternsResource));
     mcp.register_resource(Arc::new(DioxusFullstackPatternsResource));
@@ -48,10 +49,13 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(DioxusAdminUiKitResource));
     mcp.register_resource(Arc::new(RustFixResource));
     mcp.register_resource(Arc::new(ArchitectSkillResource));
+    mcp.register_resource_template(Arc::new(ArchitectSkillTopicResource::default()));
     mcp.register_resource(Arc::new(DioxusClientSideBootstrapResource));
+    mcp.register_resource_template(Arc::new(DioxusClientSideBootstrapTopicResource::default()));
     mcp.register_resource(Arc::new(MyWebSocketClientResource));
     mcp.register_resource(Arc::new(ReleaseGuideResource));
     mcp.register_resource(Arc::new(ApplicationArchitectureResource));
+    mcp.register_resource_template(Arc::new(ApplicationArchitectureTopicResource::default()));
     mcp.register_resource(Arc::new(PerformanceConsiderationsResource));
     mcp.register_resource(Arc::new(MyAiAgentResource));
     mcp.register_resource(Arc::new(SingleVmUnixSocketResource));
@@ -62,7 +66,8 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(McpDevelopmentGuideTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(FlUrlUsageGuideTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(HttpActionsDesignGuideTool::new(app.clone())));
-    mcp.register_tool_call(Arc::new(AppBootstrapGuideTool::new(app.clone())));
+    let app_bootstrap_tool = Arc::new(AppBootstrapGuideTool::new(app.clone()));
+    mcp.register_tool_call(app_bootstrap_tool.clone());
     mcp.register_tool_call(Arc::new(DioxusBootstrapGuideTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(CargoDependenciesGuideTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(MySshReadmeTool::new(app.clone())));
@@ -79,11 +84,15 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(MyPostgresReadmeTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(DioxusAdminUiKitTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(RustFixReadmeTool::new(app.clone())));
-    mcp.register_tool_call(Arc::new(ArchitectPlaybookTool::new(app.clone())));
-    mcp.register_tool_call(Arc::new(DioxusClientSideBootstrapTool::new(app.clone())));
+    let architect_playbook_tool = Arc::new(ArchitectPlaybookTool::new(app.clone()));
+    mcp.register_tool_call(architect_playbook_tool.clone());
+    let dioxus_client_side_bootstrap_tool =
+        Arc::new(DioxusClientSideBootstrapTool::new(app.clone()));
+    mcp.register_tool_call(dioxus_client_side_bootstrap_tool.clone());
     mcp.register_tool_call(Arc::new(MyWebSocketClientTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(ReleaseGuideTool::new(app.clone())));
-    mcp.register_tool_call(Arc::new(ApplicationArchitectureTool::new(app.clone())));
+    let application_architecture_tool = Arc::new(ApplicationArchitectureTool::new(app.clone()));
+    mcp.register_tool_call(application_architecture_tool.clone());
     mcp.register_tool_call(Arc::new(PerformanceConsiderationsTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(MyAiAgentTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(SingleVmUnixSocketTool::new(app.clone())));
@@ -98,8 +107,14 @@ pub async fn start(app: &Arc<AppContext>) {
     let mcp = Arc::new(mcp);
     http_server.add_middleware(mcp.clone());
 
-    // Every topic of the rust-extensions README becomes a resource of its own.
-    start_rust_extensions_topics_refresh(rust_extensions_tool.get_topics(), &mcp);
+    // Every topic of a doc split into topics becomes a resource of its own.
+    let mut topics_refresh = TopicsRefreshTimer::new(&mcp);
+    topics_refresh.register(&app_bootstrap_tool);
+    topics_refresh.register(&rust_extensions_tool);
+    topics_refresh.register(&architect_playbook_tool);
+    topics_refresh.register(&dioxus_client_side_bootstrap_tool);
+    topics_refresh.register(&application_architecture_tool);
+    topics_refresh.start();
 
     http_server.start(app.app_states.clone(), my_logger::LOGGER.clone());
 }

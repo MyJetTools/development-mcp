@@ -156,10 +156,10 @@ Then run `cargo build` once — it writes `.github/workflows/release.yaml` and `
 both. Never hand-edit a generated file: the next `cargo build` overwrites it.
 
 If the project lives in a **monorepo**, do not use `CiGenerator` — the workflow is written by hand.
-Fetch the CI section of the app-bootstrap guide (`get_app_bootstrap_guide`) for the templates; note
+Fetch the app-bootstrap guide, topic `ci-monorepo` (`get_app_bootstrap_guide`), for the templates; note
 that the pre-baked builder image described there is for native Rust services, while a Dioxus build
 runs inside the `ghcr.io/my-jet-tools/dioxus-docker` container instead (see the Dioxus client-side bootstrap
-guide for that workflow).
+guide, topic `ci`, for that workflow).
 
 ## Main.rs Structure
 

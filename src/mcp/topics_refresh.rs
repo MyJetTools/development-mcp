@@ -1,4 +1,5 @@
 use std::{
+    marker::PhantomData,
     sync::{Arc, RwLock},
     time::Duration,
 };
@@ -8,51 +9,43 @@ use my_logger::LogEventCtx;
 use rust_extensions::{MyTimer, MyTimerTick, RepeatTimerIteration};
 
 use crate::mcp::{
-    get_topic_uri, is_topic_name, load_topic, RustExtensionsResource, RustExtensionsTopicResource,
+    get_topic_name, get_topic_uri, is_topic_name, load_topic, TopicsDocDefinition, TopicsDocTool,
 };
 
-/// How often the topics table of the rust-extensions index is read again.
+/// How often the topics table of every index is read again.
 const REFRESH_INTERVAL: Duration = Duration::from_secs(10 * 60);
 
-/// One row of the topics table of the rust-extensions index (`docs/index_resource.md`):
+/// One row of the topics table of an index:
 /// ``| [`events-loop`](events-loop.md) | Single-consumer async message loop | `EventsLoop` |``.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RustExtensionsTopic {
+pub struct DocTopic {
     pub topic: String,
     pub description: String,
-    /// The types of the topic which implement `Startable`; `None` when the
-    /// index has `—` (or no such column).
-    pub startable: Option<String>,
+    /// The third cell of the row - the `Startable` types of rust-extensions;
+    /// `None` when the index has `—` (or no such column).
+    pub note: Option<String>,
 }
 
-impl RustExtensionsTopic {
-    pub fn get_name(&self) -> String {
-        get_topic_name(self.topic.as_str())
-    }
-
-    /// The index description, plus the `Startable` types when the topic has any.
-    pub fn get_description(&self) -> String {
-        match &self.startable {
-            Some(startable) => format!("{}. Startable: {}", self.description, startable),
-            None => self.description.clone(),
+impl DocTopic {
+    /// The index description, plus the third cell under the header of its
+    /// column, when the doc names one.
+    pub fn get_description(&self, note_column: Option<&str>) -> String {
+        match (note_column, &self.note) {
+            (Some(column), Some(note)) => format!("{}. {}: {}", self.description, column, note),
+            _ => self.description.clone(),
         }
     }
 }
 
-/// The resource name of a topic - every topic has its own.
-pub fn get_topic_name(topic: &str) -> String {
-    format!("rust-extensions: {}", topic)
-}
-
 /// The topics the index table lists, in its order. Anything that is not a
 /// topic row is skipped.
-pub fn parse_topics(index: &str) -> Vec<RustExtensionsTopic> {
+pub fn parse_topics(index: &str) -> Vec<DocTopic> {
     index.lines().filter_map(parse_topic_row).collect()
 }
 
-/// `| [`topic`](topic.md) | description | startable |` - the last cell is
+/// `| [`topic`](topic.md) | description | note |` - the last cell is
 /// optional, and a `docs/topic.md` link (relative to the repo root) is fine too.
-fn parse_topic_row(line: &str) -> Option<RustExtensionsTopic> {
+fn parse_topic_row(line: &str) -> Option<DocTopic> {
     let cells: Vec<&str> = line
         .trim()
         .strip_prefix('|')?
@@ -69,15 +62,15 @@ fn parse_topic_row(line: &str) -> Option<RustExtensionsTopic> {
         return None;
     }
 
-    let startable = cells
+    let note = cells
         .get(2)
         .filter(|cell| !matches!(**cell, "" | "—" | "-"))
         .map(|cell| cell.to_string());
 
-    Some(RustExtensionsTopic {
+    Some(DocTopic {
         topic: topic.to_string(),
         description: description.to_string(),
-        startable,
+        note,
     })
 }
 
@@ -85,9 +78,9 @@ fn parse_topic_row(line: &str) -> Option<RustExtensionsTopic> {
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct TopicsUpdate {
     /// Gone from the index.
-    pub removed: Vec<RustExtensionsTopic>,
+    pub removed: Vec<DocTopic>,
     /// New in the index, or with a new description.
-    pub upserted: Vec<RustExtensionsTopic>,
+    pub upserted: Vec<DocTopic>,
 }
 
 impl TopicsUpdate {
@@ -96,20 +89,20 @@ impl TopicsUpdate {
     }
 }
 
-/// The topics the index listed at the last refresh. Owned by
-/// `RustExtensionsReadmeTool`, filled by [`RustExtensionsTopicsRefresh`].
-pub struct RustExtensionsTopics {
-    items: RwLock<Vec<RustExtensionsTopic>>,
+/// The topics an index listed at the last refresh. Owned by the
+/// `TopicsDocTool` of the doc, filled by [`TopicsRefreshTimer`].
+pub struct DocTopics {
+    items: RwLock<Vec<DocTopic>>,
 }
 
-impl RustExtensionsTopics {
+impl DocTopics {
     pub fn new() -> Self {
         Self {
             items: RwLock::new(Vec::new()),
         }
     }
 
-    pub fn get(&self, topic: &str) -> Option<RustExtensionsTopic> {
+    pub fn get(&self, topic: &str) -> Option<DocTopic> {
         self.items
             .read()
             .unwrap()
@@ -119,7 +112,7 @@ impl RustExtensionsTopics {
     }
 
     /// Stores the fresh list and tells what changed.
-    pub fn update(&self, fresh: Vec<RustExtensionsTopic>) -> TopicsUpdate {
+    pub fn update(&self, fresh: Vec<DocTopic>) -> TopicsUpdate {
         let mut items = self.items.write().unwrap();
 
         let removed = items
@@ -140,24 +133,60 @@ impl RustExtensionsTopics {
     }
 }
 
-/// Keeps one MCP resource per topic of the index, so every topic shows up in
-/// `resources/list` with its own name and description. Topics the index does
-/// not list yet are still served through the `{topic}` template.
-pub struct RustExtensionsTopicsRefresh {
-    topics: Arc<RustExtensionsTopics>,
+/// Refreshes the topics of every doc split into topics on one timer - one
+/// tick per doc. Every topic of an index becomes a resource of its own.
+pub struct TopicsRefreshTimer {
+    timer: MyTimer,
     mcp: Arc<McpMiddleware>,
 }
 
+impl TopicsRefreshTimer {
+    pub fn new(mcp: &Arc<McpMiddleware>) -> Self {
+        let mut timer = MyTimer::new(REFRESH_INTERVAL, my_logger::LOGGER.clone());
+        timer.set_first_tick_before_delay();
+
+        Self {
+            timer,
+            mcp: mcp.clone(),
+        }
+    }
+
+    /// Before [`Self::start`]: the timer takes no ticks once it is started.
+    pub fn register<TDoc: TopicsDocDefinition>(&mut self, tool: &TopicsDocTool<TDoc>) {
+        self.timer.register_timer(
+            format!("{}-topics", TDoc::TOPIC_NAME_PREFIX).as_str(),
+            Arc::new(TopicsRefresh::<TDoc> {
+                topics: tool.get_topics(),
+                mcp: self.mcp.clone(),
+                _doc: PhantomData,
+            }),
+        );
+    }
+
+    pub fn start(&self) {
+        self.timer.start();
+    }
+}
+
+/// Keeps one MCP resource per topic of the index of `TDoc`, so every topic
+/// shows up in `resources/list` with its own name and description. Topics the
+/// index does not list yet are still served through the `{topic}` template.
+struct TopicsRefresh<TDoc: TopicsDocDefinition> {
+    topics: Arc<DocTopics>,
+    mcp: Arc<McpMiddleware>,
+    _doc: PhantomData<TDoc>,
+}
+
 #[async_trait::async_trait]
-impl MyTimerTick for RustExtensionsTopicsRefresh {
+impl<TDoc: TopicsDocDefinition> MyTimerTick for TopicsRefresh<TDoc> {
     async fn tick(&self) -> RepeatTimerIteration {
-        let index = match fetch_index().await {
+        let index = match fetch_index::<TDoc>().await {
             Ok(index) => index,
             Err(err) => {
                 my_logger::LOGGER.write_error(
-                    "RustExtensionsTopicsRefresh",
+                    "TopicsRefresh",
                     err,
-                    LogEventCtx::new(),
+                    LogEventCtx::new().add("index", TDoc::URL),
                 );
                 return RepeatTimerIteration::WithInterval;
             }
@@ -168,9 +197,9 @@ impl MyTimerTick for RustExtensionsTopicsRefresh {
         // An index without the table is a broken read, not "every topic is gone".
         if fresh.is_empty() {
             my_logger::LOGGER.write_warning(
-                "RustExtensionsTopicsRefresh",
-                "The rust-extensions index has no topics table - the topics are kept as they are",
-                LogEventCtx::new(),
+                "TopicsRefresh",
+                "The index has no topics table - the topics are kept as they are",
+                LogEventCtx::new().add("index", TDoc::URL),
             );
             return RepeatTimerIteration::WithInterval;
         }
@@ -179,19 +208,20 @@ impl MyTimerTick for RustExtensionsTopicsRefresh {
 
         for topic in update.removed.iter() {
             self.mcp
-                .unregister_dynamic_resource(get_topic_uri(topic.topic.as_str()).as_str())
+                .unregister_dynamic_resource(get_topic_uri::<TDoc>(topic.topic.as_str()).as_str())
                 .await;
         }
 
         for topic in update.upserted.iter() {
             self.mcp
                 .register_dynamic_resource(
-                    get_topic_uri(topic.topic.as_str()),
-                    topic.get_name(),
-                    topic.get_description(),
-                    RustExtensionsTopicResource::MIME_TYPE.to_string(),
-                    Arc::new(RustExtensionsTopicDoc {
+                    get_topic_uri::<TDoc>(topic.topic.as_str()),
+                    get_topic_name::<TDoc>(topic.topic.as_str()),
+                    topic.get_description(TDoc::NOTE_COLUMN),
+                    TDoc::MIME_TYPE.to_string(),
+                    Arc::new(TopicDoc::<TDoc> {
                         topic: topic.topic.clone(),
+                        _doc: PhantomData,
                     }),
                 )
                 .await;
@@ -205,24 +235,8 @@ impl MyTimerTick for RustExtensionsTopicsRefresh {
     }
 }
 
-pub fn start_rust_extensions_topics_refresh(
-    topics: Arc<RustExtensionsTopics>,
-    mcp: &Arc<McpMiddleware>,
-) {
-    let mut timer = MyTimer::new(REFRESH_INTERVAL, my_logger::LOGGER.clone());
-    timer.set_first_tick_before_delay();
-    timer.register_timer(
-        "rust-extensions-topics",
-        Arc::new(RustExtensionsTopicsRefresh {
-            topics,
-            mcp: mcp.clone(),
-        }),
-    );
-    timer.start();
-}
-
-async fn fetch_index() -> Result<String, String> {
-    let url = RustExtensionsResource::URL;
+async fn fetch_index<TDoc: TopicsDocDefinition>() -> Result<String, String> {
+    let url = TDoc::URL;
 
     let mut response = flurl::FlUrl::new(url)
         .get()
@@ -231,7 +245,10 @@ async fn fetch_index() -> Result<String, String> {
 
     let status_code = response.get_status_code();
     if status_code != 200 {
-        return Err(format!("Failed to fetch {}: status code {}", url, status_code));
+        return Err(format!(
+            "Failed to fetch {}: status code {}",
+            url, status_code
+        ));
     }
 
     let text = response
@@ -243,22 +260,25 @@ async fn fetch_index() -> Result<String, String> {
 }
 
 /// `resources/read` of one listed topic.
-struct RustExtensionsTopicDoc {
+struct TopicDoc<TDoc: TopicsDocDefinition> {
     topic: String,
+    _doc: PhantomData<TDoc>,
 }
 
 #[async_trait::async_trait]
-impl McpResourceService for RustExtensionsTopicDoc {
+impl<TDoc: TopicsDocDefinition> McpResourceService for TopicDoc<TDoc> {
     async fn read_resource(&self) -> Result<ResourceReadResult, String> {
-        let text = load_topic(self.topic.as_str()).await.map_err(|err| match err {
-            ResourceTemplateReadError::NotFound(message) => message,
-            ResourceTemplateReadError::Internal(message) => message,
-        })?;
+        let text = load_topic::<TDoc>(self.topic.as_str())
+            .await
+            .map_err(|err| match err {
+                ResourceTemplateReadError::NotFound(message) => message,
+                ResourceTemplateReadError::Internal(message) => message,
+            })?;
 
         Ok(ResourceReadResult {
             contents: vec![ResourceContent {
-                uri: get_topic_uri(self.topic.as_str()),
-                mime_type: RustExtensionsTopicResource::MIME_TYPE.to_string(),
+                uri: get_topic_uri::<TDoc>(self.topic.as_str()),
+                mime_type: TDoc::MIME_TYPE.to_string(),
                 text: Some(text),
                 blob: None,
             }],
@@ -270,19 +290,19 @@ impl McpResourceService for RustExtensionsTopicDoc {
 mod tests {
     use super::*;
 
-    fn topic(topic: &str, description: &str) -> RustExtensionsTopic {
-        RustExtensionsTopic {
+    fn topic(topic: &str, description: &str) -> DocTopic {
+        DocTopic {
             topic: topic.to_string(),
             description: description.to_string(),
-            startable: None,
+            note: None,
         }
     }
 
-    fn startable(topic: &str, description: &str, startable: &str) -> RustExtensionsTopic {
-        RustExtensionsTopic {
+    fn with_note(topic: &str, description: &str, note: &str) -> DocTopic {
+        DocTopic {
             topic: topic.to_string(),
             description: description.to_string(),
-            startable: Some(startable.to_string()),
+            note: Some(note.to_string()),
         }
     }
 
@@ -304,15 +324,18 @@ mod tests {
         assert_eq!(
             parse_topics(index),
             vec![
-                topic("date-time", "`DateTimeAsMicroseconds` — UTC µs timestamp, serde"),
-                startable("timers", "Periodic work", "`MyTimer`, `MyExactTimer`"),
+                topic(
+                    "date-time",
+                    "`DateTimeAsMicroseconds` — UTC µs timestamp, serde"
+                ),
+                with_note("timers", "Periodic work", "`MyTimer`, `MyExactTimer`"),
             ]
         );
     }
 
     /// The README of the repo root used to be the index - its rows link `docs/`.
     #[test]
-    fn the_startable_column_and_the_docs_prefix_are_optional() {
+    fn the_third_column_and_the_docs_prefix_are_optional() {
         let index = "| [`events-loop`](docs/events-loop.md) | Single-consumer async message loop |";
 
         assert_eq!(
@@ -322,13 +345,25 @@ mod tests {
     }
 
     #[test]
-    fn the_description_names_the_startable_types() {
+    fn the_description_names_the_third_column() {
+        let events_loop = with_note(
+            "events-loop",
+            "Single-consumer async message loop",
+            "`EventsLoop`",
+        );
+
         assert_eq!(
-            startable("events-loop", "Single-consumer async message loop", "`EventsLoop`")
-                .get_description(),
+            events_loop.get_description(Some("Startable")),
             "Single-consumer async message loop. Startable: `EventsLoop`"
         );
-        assert_eq!(topic("misc", "Paths").get_description(), "Paths");
+        assert_eq!(
+            events_loop.get_description(None),
+            "Single-consumer async message loop"
+        );
+        assert_eq!(
+            topic("misc", "Paths").get_description(Some("Startable")),
+            "Paths"
+        );
     }
 
     #[test]
@@ -345,7 +380,7 @@ mod tests {
 
     #[test]
     fn an_update_tells_what_was_removed_added_and_changed() {
-        let topics = RustExtensionsTopics::new();
+        let topics = DocTopics::new();
 
         let first = topics.update(vec![topic("a", "one"), topic("b", "two")]);
         assert_eq!(first.upserted, vec![topic("a", "one"), topic("b", "two")]);
@@ -356,7 +391,10 @@ mod tests {
 
         let changed = topics.update(vec![topic("b", "two, longer"), topic("c", "three")]);
         assert_eq!(changed.removed, vec![topic("a", "one")]);
-        assert_eq!(changed.upserted, vec![topic("b", "two, longer"), topic("c", "three")]);
+        assert_eq!(
+            changed.upserted,
+            vec![topic("b", "two, longer"), topic("c", "three")]
+        );
 
         assert_eq!(topics.get("c"), Some(topic("c", "three")));
         assert_eq!(topics.get("a"), None);
