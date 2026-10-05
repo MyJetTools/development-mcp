@@ -44,7 +44,7 @@ pub struct ResourceToolListResponse {
     pub items: Vec<ResourceToolInfo>,
 }
 
-async fn fetch_resource_text(
+pub(crate) async fn fetch_resource_text(
     uri: &str,
     resource_name: &str,
     resource_description: &str,
@@ -258,7 +258,7 @@ define_resource_tool!(DioxusBootstrapGuideTool, DioxusBootstrapResource);
 define_resource_tool!(CargoDependenciesGuideTool, CargoDependenciesResource);
 define_resource_tool!(MySshReadmeTool, MySshResource);
 define_resource_tool!(MyTcpSocketsReadmeTool, MyTcpSocketsResource);
-define_resource_tool!(RustExtensionsReadmeTool, RustExtensionsResource);
+// RustExtensionsReadmeTool takes a `topic` - it lives next to its resource.
 define_resource_tool!(ServiceSdkReadmeTool, ServiceSdkResource);
 define_resource_tool!(DioxusDesignPatternsTool, DioxusDesignPatternsResource);
 define_resource_tool!(DioxusFullstackPatternsTool, DioxusFullstackPatternsResource);

@@ -36,6 +36,7 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(MySshResource));
     mcp.register_resource(Arc::new(MyTcpSocketsResource));
     mcp.register_resource(Arc::new(RustExtensionsResource));
+    mcp.register_resource_template(Arc::new(RustExtensionsTopicResource));
     mcp.register_resource(Arc::new(ServiceSdkResource));
     mcp.register_resource(Arc::new(DioxusDesignPatternsResource));
     mcp.register_resource(Arc::new(DioxusFullstackPatternsResource));
