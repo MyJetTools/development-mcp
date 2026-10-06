@@ -104,7 +104,7 @@ dx build --package your-project-name
 2. **`dioxus-utils` feature is `"web"`**, not `"fullstack"`
 3. **API calls via FlUrl with relative `/api/...` URLs** — the wasm backend resolves them against the page origin; build requests from shared `rest-api-shared` models via `.execute_request(HttpVerb::X, model)` (never hand-assemble JSON)
 4. **WebSocket via `my-web-sockets-wasm`** (`get_my_web_sockets_wasm_readme`) — auto-reconnecting client over the browser WebSocket API: no custom headers, token via query parameter, `conn.mark_initialized()` is mandatory
-5. **`GlobalAppSettings::get_origin()`** — use it **only** for the WebSocket URL (the browser WS API needs an absolute `ws`/`wss` URL); API calls use relative URLs and never compute a base URL
+5. **`GlobalAppSettings::new().get_origin()`** — use it **only** for the WebSocket URL (the browser WS API needs an absolute `ws`/`wss` URL); API calls use relative URLs and never compute a base URL
 6. **`dioxus_utils::console_log()`** — for browser console logging
 7. **Pre-auth vs post-auth pages** — controlled by `LocationState` and `with_ws` flag on `App` component
 8. **CSS compiled by `build.rs`** — source in `css/`, output in `public/assets/app.css`. **NEVER** edit `app.css` directly

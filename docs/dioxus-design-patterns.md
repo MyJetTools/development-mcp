@@ -823,7 +823,7 @@ spawn(async move {
 
 ### Storage is a copy — when the server holds the same data
 
-If the same data also lives on the server (a draft the server keeps), add `#[serde(default)] pub sent: bool` to the record — *the server holds exactly this*. Every method that changes the record clears it, a confirmed write to the server sets it; both go through `persist()`. When the server's copy arrives beside the state:
+If the same data also lives on the server (a draft the server keeps), add `#[serde(default)] pub sent: bool` to the record — *the server holds exactly this*. Every method that changes the record clears it, a confirmed write to the server sets it; both go through `persist()`. The record, `new()` and `persist()` for this case are shown in the next subsection — the examples above are a screen with no copy on the server. When the server's copy arrives beside the state:
 
 | `sent` | Server's copy | Which one stands |
 | --- | --- | --- |
@@ -837,9 +837,59 @@ A state created with no record, while the server may hold one, waits for the ser
 
 A confirmation covers the record **the request carried** — a change made while it was in flight is not on the server. The state counts revisions: every change of the record bumps `revision` and clears `sent`; the push remembers the revision it left with; the confirmation sets `sent = (revision == the one that was sent)`. `revision` is a field of the state only — the record keeps `sent`.
 
+`sent` survives a refresh only as a field of the record: `new()` takes it from the record, and `to_record()` — the one place the state becomes a record — puts it back; `persist()` and the push both go through `to_record()`. Kept in the state alone it is `false` after every refresh, and by the table above the local copy then replaces a change made elsewhere.
+
 ```rust
-// ✅ CORRECT — state.rs
+// ✅ CORRECT — the record when the server holds the same data: the base record plus `sent`
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ConfiguratorRecord {
+    // the address the record was created at
+    #[serde(default)]
+    pub link: ConfiguratorLink,
+    #[serde(default)]
+    pub plan_id: String,
+    #[serde(default)]
+    pub options: Vec<String>,
+    // the server holds exactly this record
+    #[serde(default)]
+    pub sent: bool,
+}
+
+// state.rs
 impl ComponentState {
+    pub fn new(link: ConfiguratorLink) -> Self {
+        let stored = crate::web::storage::configurator::get();
+        let record = ConfiguratorRecord::for_link(stored.clone(), &link).unwrap_or_default();
+        Self {
+            plan_id: record.plan_id,
+            options: record.options,
+            sent: record.sent, // from the record — a refresh keeps it
+            link,
+            stored,
+            // ... all other fields = defaults
+        }
+    }
+
+    // The ONE place the state becomes a record
+    fn to_record(&self) -> ConfiguratorRecord {
+        ConfiguratorRecord {
+            link: self.link.clone(),
+            plan_id: self.plan_id.clone(),
+            options: self.options.clone(),
+            sent: self.sent,
+        }
+    }
+
+    // The only writer of the record — compares before it writes
+    fn persist(&mut self) {
+        let record = self.to_record();
+        if self.stored.as_ref() == Some(&record) {
+            return;
+        }
+        crate::web::storage::configurator::set(&record);
+        self.stored = Some(record);
+    }
+
     // Called by every method that changes the record
     fn changed(&mut self) {
         self.revision = self.revision.wrapping_add(1);
