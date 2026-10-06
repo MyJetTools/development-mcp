@@ -4,6 +4,8 @@
 
 Client-side apps typically have **pre-auth pages** (login, code verification) and **post-auth pages** (dashboard, etc.). The `App` component decides whether to start a WebSocket connection based on the current route.
 
+`main()` installs the panic hook before anything else: `dioxus_utils::set_panic_hook()`. Dioxus installs none in a release build, so without it a panic leaves only `RuntimeError: unreachable` in the browser console — with it, the console shows the panic text and the file, line and column. In a debug build (`dx serve`) Dioxus installs its own hook at launch, which replaces this one. See **Panic Hook** in the dioxus-utils README (`get_dioxus_utils_readme`).
+
 ```rust
 use dioxus::prelude::*;
 use futures::StreamExt;
@@ -38,6 +40,9 @@ enum AppRoute {
 }
 
 fn main() {
+    // First thing in main() — a release build prints no panic text without it
+    dioxus_utils::set_panic_hook();
+
     dioxus::LaunchBuilder::new().launch(|| {
         rsx! {
             document::Link { rel: "icon", href: asset!("/public/favicon.ico") }

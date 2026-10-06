@@ -75,7 +75,7 @@ Every part of the skeleton is a topic. Bootstrapping a new project means going t
 | Topic | What is inside |
 | --- | --- |
 | [`project-files`](project-files.md) | `Cargo.toml` (`dioxus/web`, `dioxus-utils` with `web`, FlUrl, `rest-api-shared`, `reqwasm`), `Dioxus.toml`, CSS compilation in `build.rs` |
-| [`routing`](routing.md) | `main.rs`: the route enum, pre-auth and post-auth pages, the `App` component that kicks off the WebSocket; `AppState` and `LocationState` |
+| [`routing`](routing.md) | `main.rs`: the panic hook, the route enum, pre-auth and post-auth pages, the `App` component that kicks off the WebSocket; `AppState` and `LocationState` |
 | [`websocket`](websocket.md) | Browser WebSocket via `reqwasm` with the token in the query string; the `event_id:json_payload` wire format and its handler |
 | [`shared-wire-models`](shared-wire-models.md) | The `rest-api-shared` crate shared verbatim with the REST-API server: request / response derives, WASM-clean with a `server` feature, pure-data models |
 | [`api-calls`](api-calls.md) | FlUrl with relative `/api/...` URLs and shared `MyHttpInput` models; the three centralized response helpers; `RequestError` and client view-state models |
@@ -114,3 +114,4 @@ dx build --package your-project-name
 12. **Centralize HTTP handling** — every API function forwards FlUrl's raw `Result<FlUrlResponse, FlUrlError>` to `handle_http_response` / `handle_http_empty` / `handle_http_response_opt` in `api/mod.rs`; no per-call status checks
 13. **Parameter-less requests use `EmptyRequestModel`** — don't declare an empty `MyHttpInput` model just to satisfy `execute_request`
 14. **Never put `///` doc-comments on `MyHttpInput` / `MyHttpObjectStructure` struct fields** — the proc-macro panics; use the `description = "..."` attribute instead
+15. **`dioxus_utils::set_panic_hook()` is the first line of `main()`** — a release build prints no panic text without it, only `RuntimeError: unreachable` in the browser console
