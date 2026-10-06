@@ -119,7 +119,17 @@ spawn(async move {
 
 ## 9) Client-side "now" date/time
 
-If "now" must be resolved on the **client side**: use `dioxus_utils::now_date_time()`.
+If "now" must be resolved on the **client side**: use `rust_extensions::date_time::DateTimeAsMicroseconds::now()` — it handles wasm and native itself.
+
+```rust
+// ✅ CORRECT
+let now = rust_extensions::date_time::DateTimeAsMicroseconds::now();
+
+// ❌ WRONG — removed from dioxus-utils
+let now = dioxus_utils::now_date_time();
+```
+
+`rust-extensions` is a dependency of the project itself — dioxus-utils does not re-export it. See **UUID and Date/Time (moved to `rust-extensions`)** in the dioxus-utils README (`get_dioxus_utils_readme`).
 
 ## 10) Status messaging
 

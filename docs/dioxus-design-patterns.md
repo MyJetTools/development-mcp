@@ -678,7 +678,7 @@ onclick: move |_| {
 
 ### The record
 
-One serde struct per screen, and one module that touches the browser API:
+One serde struct per screen, and one module that reads and writes it — through `dioxus_utils::js::SESSION_STORAGE` / `LOCAL_STORAGE`, never through the browser API itself:
 
 ```rust
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -701,32 +701,41 @@ pub struct ConfiguratorLink {
 
 ```rust
 // web/storage/configurator.rs
+use dioxus_utils::js::SESSION_STORAGE;
+
 const KEY: &str = "configurator";
 
-fn session_storage() -> Option<web_sys::Storage> {
-    web_sys::window()?.session_storage().ok().flatten()
-}
-
 pub fn get() -> Option<ConfiguratorRecord> {
-    let raw = session_storage()?.get_item(KEY).ok().flatten()?;
+    let raw = SESSION_STORAGE.get(KEY)?;
     serde_json::from_str(&raw).ok()
 }
 
 pub fn set(record: &ConfiguratorRecord) {
-    if let (Some(storage), Ok(json)) = (session_storage(), serde_json::to_string(record)) {
-        let _ = storage.set_item(KEY, &json);
+    if let Ok(json) = serde_json::to_string(record) {
+        SESSION_STORAGE.set(KEY, &json);
     }
 }
 
 pub fn clear() {
-    if let Some(storage) = session_storage() {
-        let _ = storage.remove_item(KEY);
-    }
+    SESSION_STORAGE.delete(KEY);
 }
 ```
 
+```rust
+// ❌ WRONG — an accessor of the project's own: storage that could not be obtained reads as "no record"
+fn local_storage() -> Option<web_sys::Storage> {
+    web_sys::window()?.local_storage().ok().flatten()
+}
+
+// ❌ WRONG — a write the browser refused is dropped, and the screen goes on as if it was saved
+let _ = storage.set_item(KEY, &json);
+```
+
 - Every field is `#[serde(default)]` — a record written by an older build still loads.
-- An unreadable record is **no record**: absent, storage unavailable, unparsable — `get()` answers `None` for all three and never panics.
+- **Storage only through `dioxus_utils::js::LOCAL_STORAGE` / `SESSION_STORAGE`** (dioxus-utils `web` feature) — the project has no storage accessor of its own.
+- **Two different absences — never read one as the other:**
+  - **No record** — the key is absent, or this build cannot parse the value: `get()` answers `None` and the screen starts from scratch. The ordinary case.
+  - **No storage** — it cannot be obtained, or the browser refuses a read, a write or a delete (e.g. the quota is exceeded): `dioxus-utils` panics. An app that keeps its session there is a different program without storage — a failure is never read as "nothing is stored".
 - **`sessionStorage` for screen state** — a refresh is the same visit and comes back to the same screen, a new tab is a new visit. **`localStorage` for preferences and tokens.**
 - A record that holds anything personal is **cleared when the session ends** — call `clear()` where the tokens are cleared.
 
@@ -823,3 +832,100 @@ If the same data also lives on the server (a draft the server keeps), add `#[ser
 | `true` | differs | The server's — it was changed elsewhere (another tab, another device); put it into the state |
 
 A state created with no record, while the server may hold one, waits for the server's copy before the first picture — the same rule as above.
+
+### `sent` — only if the record did not change while the request was in flight
+
+A confirmation covers the record **the request carried** — a change made while it was in flight is not on the server. The state counts revisions: every change of the record bumps `revision` and clears `sent`; the push remembers the revision it left with; the confirmation sets `sent = (revision == the one that was sent)`. `revision` is a field of the state only — the record keeps `sent`.
+
+```rust
+// ✅ CORRECT — state.rs
+impl ComponentState {
+    // Called by every method that changes the record
+    fn changed(&mut self) {
+        self.revision = self.revision.wrapping_add(1);
+        self.sent = false;
+        self.persist();
+    }
+
+    // The push starts: the revision it leaves with, and the record it carries
+    pub fn sync_started(&self) -> (u32, ConfiguratorRecord) {
+        (self.revision, self.to_record())
+    }
+
+    // The server confirmed the push that left with `revision`
+    pub fn sync_finished(&mut self, revision: u32) {
+        self.sent = self.revision == revision;
+        self.persist();
+    }
+}
+
+// actions.rs
+spawn(async move {
+    let (revision, record) = cs.read().sync_started();
+    if crate::api::configurator::save_draft(&record).await.is_ok() {
+        cs.write().sync_finished(revision);
+    }
+});
+```
+
+```rust
+// ❌ WRONG — a change made during the request is marked as known to the server:
+// by the table above, the server's older copy then replaces it
+if crate::api::configurator::save_draft(&record).await.is_ok() {
+    cs.write().set_sent();
+}
+```
+
+### `localStorage` is shared by all tabs — compare and clear
+
+`localStorage` is one slot for every tab of the site (`sessionStorage` is per tab). A page that learns its record is finished — the invoice is paid, the draft is submitted — clears it by **compare-and-clear**: the test is made against the **slot, at the moment of the write**, not against what the page read when it opened. Another tab may have put a newer record there since.
+
+```rust
+// ✅ CORRECT — web/storage/invoice.rs: cleared only if the slot still holds this invoice
+pub fn clear_if(id: &str) {
+    if get().is_some_and(|held| held.id == id) {
+        clear();
+    }
+}
+
+// The page that learned invoice `id` is settled
+crate::web::storage::invoice::clear_if(&id);
+```
+
+```rust
+// ❌ WRONG — clears whatever the slot holds now: the newer invoice of another tab is lost
+crate::web::storage::invoice::clear();
+
+// ❌ WRONG — tested against what this page read when it opened, not against the slot
+if cs.read().stored.as_ref().is_some_and(|held| held.id == id) {
+    crate::web::storage::invoice::clear();
+}
+```
+
+### Above the router — a `GlobalSignal` born from storage
+
+What is drawn **above the router** — a toast, an error banner — lives outside any screen's state: there is no `new()` to read storage in. A stored value it needs (the language) is a `GlobalSignal`: born from storage **once**, and changed by the **same method that writes storage** — never a storage read in render.
+
+```rust
+// ✅ CORRECT — states/app_state.rs
+// Born from storage once — the first time anything reads it
+pub static CHROME_LANG: GlobalSignal<LangId> =
+    Signal::global(crate::web::storage::language::get_lang);
+
+impl AppState {
+    // The one place the language changes: the state, storage and the global signal move together
+    pub fn set_lang(&mut self, lang: LangId) {
+        self.lang = lang;
+        crate::web::storage::language::set_lang(lang);
+        *CHROME_LANG.write() = lang;
+    }
+}
+
+// The toast drawn above the router
+let lang = *CHROME_LANG.read();
+```
+
+```rust
+// ❌ WRONG — storage is read on every render, and the toast is not redrawn when the language changes
+let lang = crate::web::storage::language::get_lang();
+```

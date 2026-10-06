@@ -159,6 +159,10 @@ enum AppRoute {
 }
 
 fn main() {
+    // First thing in main() — the wasm client of a release build prints no panic text without it,
+    // only `RuntimeError: unreachable`. With the `server` feature the function does nothing
+    dioxus_utils::set_panic_hook();
+
     dioxus::LaunchBuilder::new()
         .with_cfg(server_only!(ServeConfig::builder().incremental(
             IncrementalRendererConfig::default()
@@ -552,6 +556,7 @@ If the project lives in a **monorepo**, do not use `CiGenerator` — both workfl
 - Set up Dioxus.toml with web configuration
 - CSS lives in `css/` and `build.rs` compiles it into `public/assets/app.css` — never edit `app.css` directly
 - Create main.rs with routing but NO init_app call on startup
+- `dioxus_utils::set_panic_hook()` is the first line of `main()` — without it a panic in the wasm client of a release build leaves only `RuntimeError: unreachable` in the browser console; on the server (`dioxus-utils/server`) the function does nothing
 - Create empty module files for all directories
 - The App component should render immediately without any async initialization
 - Server module structure: `server/{mod.rs, settings.rs, app/, grpc_client/}`
