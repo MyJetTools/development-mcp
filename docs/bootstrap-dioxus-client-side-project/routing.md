@@ -7,9 +7,10 @@ Client-side apps typically have **pre-auth pages** (login, code verification) an
 `main()` installs the panic hook before anything else: `dioxus_utils::set_panic_hook()`. Dioxus installs none in a release build, so without it a panic leaves only `RuntimeError: unreachable` in the browser console — with it, the console shows the panic text and the file, line and column. In a debug build (`dx serve`) Dioxus installs its own hook at launch, which replaces this one. See **Panic Hook** in the dioxus-utils README (`get_dioxus_utils_readme`).
 
 ```rust
+use std::rc::Rc;
+
 use dioxus::prelude::*;
-use futures::StreamExt;
-use reqwasm::websocket::{futures::WebSocket, Message};
+use my_web_sockets_wasm::{Message, WebSocketClient, WsCallback, WsConnection};
 
 mod api;
 mod components;
@@ -91,11 +92,9 @@ fn App(with_ws: bool) -> Element {
     use_context_provider(|| Signal::new(AppState::default()));
 
     let app_state = consume_context::<Signal<AppState>>();
-    let app_state_ra = app_state.read();
 
-    if with_ws && !app_state_ra.ws_is_kicked_off {
-        kick_off_ws();
-    }
+    // Uses hooks — called on every render, never under `if`. See topic `websocket`
+    kick_off_ws(app_state, with_ws);
 
     let location_state = consume_context::<Signal<LocationState>>();
     let location = { location_state.read().clone() };
@@ -134,7 +133,6 @@ use crate::models::InstrumentWsModel;
 #[derive(Default)]
 pub struct AppState {
     dialog_state: DialogState,
-    pub ws_is_kicked_off: bool,
     pub instruments: Vec<InstrumentWsModel>,
 }
 

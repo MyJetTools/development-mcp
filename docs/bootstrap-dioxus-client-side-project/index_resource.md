@@ -15,7 +15,7 @@ For component design patterns (state management, folder structure, DataState, di
 | Trading terminal, SPA calling external API | **Client-side** (`dioxus/web`) |
 | Static site with no server functions | **Client-side** (`dioxus/web`) |
 
-Key difference: client-side project has **no `#[server]` functions**, no `server` feature, no `src/server/` module. All data comes from HTTP API calls (`flurl`) or WebSocket (`reqwasm`).
+Key difference: client-side project has **no `#[server]` functions**, no `server` feature, no `src/server/` module. All data comes from HTTP API calls (`flurl`) or WebSocket (`my-web-sockets-wasm`).
 
 ## Project Structure
 
@@ -74,9 +74,9 @@ Every part of the skeleton is a topic. Bootstrapping a new project means going t
 
 | Topic | What is inside |
 | --- | --- |
-| [`project-files`](project-files.md) | `Cargo.toml` (`dioxus/web`, `dioxus-utils` with `web`, FlUrl, `rest-api-shared`, `reqwasm`), `Dioxus.toml`, CSS compilation in `build.rs` |
+| [`project-files`](project-files.md) | `Cargo.toml` (`dioxus/web`, `dioxus-utils` with `web`, FlUrl, `rest-api-shared`, `my-web-sockets-wasm`), `Dioxus.toml`, CSS compilation in `build.rs` |
 | [`routing`](routing.md) | `main.rs`: the panic hook, the route enum, pre-auth and post-auth pages, the `App` component that kicks off the WebSocket; `AppState` and `LocationState` |
-| [`websocket`](websocket.md) | Browser WebSocket via `reqwasm` with the token in the query string; the `event_id:json_payload` wire format and its handler |
+| [`websocket`](websocket.md) | Browser WebSocket via `my-web-sockets-wasm` (`WsCallback` + `WebSocketClient`, auto-reconnect) with the token in the query string; the `event_id:json_payload` wire format and its handler |
 | [`shared-wire-models`](shared-wire-models.md) | The `rest-api-shared` crate shared verbatim with the REST-API server: request / response derives, WASM-clean with a `server` feature, pure-data models |
 | [`api-calls`](api-calls.md) | FlUrl with relative `/api/...` URLs and shared `MyHttpInput` models; the three centralized response helpers; `RequestError` and client view-state models |
 | [`local-storage`](local-storage.md) | Session and refresh tokens in `localStorage` |
@@ -103,7 +103,7 @@ dx build --package your-project-name
 1. **No server module** — client-side project has no `src/server/`, no `#[server]` functions, no `#[cfg(feature = "server")]`
 2. **`dioxus-utils` feature is `"web"`**, not `"fullstack"`
 3. **API calls via FlUrl with relative `/api/...` URLs** — the wasm backend resolves them against the page origin; build requests from shared `rest-api-shared` models via `.execute_request(HttpVerb::X, model)` (never hand-assemble JSON)
-4. **WebSocket via `reqwasm`** — browser WebSocket API, no custom headers, token via query parameter
+4. **WebSocket via `my-web-sockets-wasm`** (`get_my_web_sockets_wasm_readme`) — auto-reconnecting client over the browser WebSocket API: no custom headers, token via query parameter, `conn.mark_initialized()` is mandatory
 5. **`GlobalAppSettings::get_origin()`** — use it **only** for the WebSocket URL (the browser WS API needs an absolute `ws`/`wss` URL); API calls use relative URLs and never compute a base URL
 6. **`dioxus_utils::console_log()`** — for browser console logging
 7. **Pre-auth vs post-auth pages** — controlled by `LocationState` and `with_ws` flag on `App` component

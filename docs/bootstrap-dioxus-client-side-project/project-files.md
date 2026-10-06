@@ -26,8 +26,8 @@ flurl = { tag = "0.7.0", git = "https://github.com/MyJetTools/fl-url.git" }
 # Provides the THttpRequestBuilder bound named by the generic authed-POST helper.
 my-http-utils = { tag = "0.1.0", git = "https://github.com/MyJetTools/my-http-utils.git" }
 
-reqwasm = "*"
-futures = { version = "*" }
+# Browser WebSocket client: reconnect loop and timeouts built in.
+my-web-sockets-wasm = { tag = "0.1.0", git = "https://github.com/MyJetTools/my-web-sockets-wasm.git" }
 
 serde_json = { version = "*" }
 serde = { version = "*", features = ["derive"] }
@@ -44,7 +44,7 @@ Key differences from fullstack:
 - `dioxus-utils` uses `"web"` feature, not `"fullstack"`
 - `flurl` for HTTP API calls (compiles to the WASM fetch API; resolves relative `/api/...` URLs)
 - `rest-api-shared` (path dep, **without** the `server` feature) for wire models shared with the REST-API server; `my-http-utils` names the `THttpRequestBuilder` bound used by the generic authed-POST helper
-- `reqwasm` for WebSocket connections from the browser
+- `my-web-sockets-wasm` for WebSocket connections from the browser — auto-reconnecting, see topic `websocket`
 
 ## Dioxus.toml
 

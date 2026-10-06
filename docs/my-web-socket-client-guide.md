@@ -5,7 +5,7 @@ alwaysApply: false
 
 WebSocket client library for non-WASM Rust applications (CLI tools, backend services, daemons). Provides automatic reconnection, heartbeat, and a callback-driven API.
 
-For browser/WASM WebSocket connections see `get_dioxus_client_side_bootstrap_guide`, topic `websocket` (uses `reqwasm`).
+For browser/WASM WebSocket connections see `get_dioxus_client_side_bootstrap_guide`, topic `websocket` (uses `my-web-sockets-wasm`).
 
 ## Cargo.toml
 
