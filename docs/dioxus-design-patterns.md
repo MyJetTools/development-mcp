@@ -574,3 +574,252 @@ let data = SubmitData {
 ```
 
 Same applies to writes — batch mutations in one `.write()` or use a state method (see §7).
+
+## 18) Browser storage initialises the state — the screen is never drawn from it
+
+Browser storage (`sessionStorage` / `localStorage`) is **not a source for rendering**. It is what the state is initialised from, so that a refresh comes back to the same screen:
+
+- **Read once — in `new()`.** The state is created from the stored record, so the very first render is already the right one. Render and effects **never** read storage.
+- **Write-through.** A state method that changes a stored value writes storage **in the same method** — the state and storage change together.
+
+Applies to screens whose first render happens in the browser (client-side projects). A server-rendered fullstack page is first drawn on the server, which has no browser storage, and hydration expects the client's first render to match that HTML.
+
+### Read once — in `new()`
+
+```rust
+// ✅ CORRECT — the state is created from the record: the first render is already right
+#[component]
+pub fn Configurator(discount_id: String) -> Element {
+    let link = ConfiguratorLink { discount_id };
+    let mut cs = use_signal(move || ComponentState::new(link));
+    let cs_ra = cs.read();
+    // ... draw from cs_ra and from nothing else
+}
+
+// state.rs
+impl ComponentState {
+    pub fn new(link: ConfiguratorLink) -> Self {
+        // The ONE read of storage
+        let stored = crate::web::storage::configurator::get();
+        // Only a record created at this address counts — see "The address" below
+        let record = ConfiguratorRecord::for_link(stored.clone(), &link).unwrap_or_default();
+        Self {
+            plan_id: record.plan_id,
+            options: record.options,
+            link,
+            stored, // what storage holds now — lets persist() skip a write that changes nothing
+            // ... all other fields = defaults
+        }
+    }
+}
+```
+
+```rust
+// ❌ WRONG — created empty, storage read after the first render:
+// the first frame is wrong, the second one corrects it
+let mut cs = use_signal(ComponentState::default);
+use_effect(move || {
+    if let Some(record) = crate::web::storage::configurator::get() {
+        cs.write().apply_record(record);
+    }
+});
+
+// ❌ WRONG — drawn from storage
+let plan_id = crate::web::storage::configurator::get().map(|r| r.plan_id);
+```
+
+### Write-through — the method that changes the state writes storage
+
+Storage is written by the state method (§7) that makes the change — not by an effect and not by the handler:
+
+```rust
+// ✅ CORRECT — state.rs
+impl ComponentState {
+    pub fn pick_plan(&mut self, plan_id: &str) {
+        self.plan_id = plan_id.to_string();
+        self.options.clear();
+        self.persist();
+    }
+
+    // The only writer of the record
+    fn persist(&mut self) {
+        let record = ConfiguratorRecord {
+            link: self.link.clone(),
+            plan_id: self.plan_id.clone(),
+            options: self.options.clone(),
+        };
+        if self.stored.as_ref() == Some(&record) {
+            return;
+        }
+        crate::web::storage::configurator::set(&record);
+        self.stored = Some(record);
+    }
+}
+
+// Handler — one line, knows nothing about storage
+onclick: move |_| cs.write().pick_plan(&plan_id),
+```
+
+```rust
+// ❌ WRONG — an effect subscribes to the whole state: every change of any field,
+// each keystroke included, pays for a synchronous storage write
+use_effect(move || {
+    crate::web::storage::configurator::set(&cs.read().to_record());
+});
+
+// ❌ WRONG — the handler has to remember to write; the next handler will not
+onclick: move |_| {
+    cs.write().plan_id = plan_id.clone();
+    crate::web::storage::configurator::set(&cs.read().to_record());
+},
+```
+
+`persist()` compares before it writes, so it is safe to call at the end of every method that may change the record — a keystroke that leaves the record as it was is not a storage write. Keep text that is still being typed out of the record; store the applied value.
+
+### The record
+
+One serde struct per screen, and one module that touches the browser API:
+
+```rust
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ConfiguratorRecord {
+    // the address the record was created at
+    #[serde(default)]
+    pub link: ConfiguratorLink,
+    #[serde(default)]
+    pub plan_id: String,
+    #[serde(default)]
+    pub options: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ConfiguratorLink {
+    #[serde(default)]
+    pub discount_id: String,
+}
+```
+
+```rust
+// web/storage/configurator.rs
+const KEY: &str = "configurator";
+
+fn session_storage() -> Option<web_sys::Storage> {
+    web_sys::window()?.session_storage().ok().flatten()
+}
+
+pub fn get() -> Option<ConfiguratorRecord> {
+    let raw = session_storage()?.get_item(KEY).ok().flatten()?;
+    serde_json::from_str(&raw).ok()
+}
+
+pub fn set(record: &ConfiguratorRecord) {
+    if let (Some(storage), Ok(json)) = (session_storage(), serde_json::to_string(record)) {
+        let _ = storage.set_item(KEY, &json);
+    }
+}
+
+pub fn clear() {
+    if let Some(storage) = session_storage() {
+        let _ = storage.remove_item(KEY);
+    }
+}
+```
+
+- Every field is `#[serde(default)]` — a record written by an older build still loads.
+- An unreadable record is **no record**: absent, storage unavailable, unparsable — `get()` answers `None` for all three and never panics.
+- **`sessionStorage` for screen state** — a refresh is the same visit and comes back to the same screen, a new tab is a new visit. **`localStorage` for preferences and tokens.**
+- A record that holds anything personal is **cleared when the session ends** — call `clear()` where the tokens are cleared.
+
+### Navigating with data — write the destination's record, then navigate
+
+The destination's state is created from the record, so it arrives already drawn right:
+
+```rust
+// ✅ CORRECT
+fn open_configurator(plan_id: &str, discount_id: &str) {
+    crate::web::storage::configurator::set(&ConfiguratorRecord {
+        link: ConfiguratorLink { discount_id: discount_id.to_string() },
+        plan_id: plan_id.to_string(),
+        ..Default::default()
+    });
+    navigator().push(AppRoute::Configurator { discount_id: discount_id.to_string() });
+}
+
+// ❌ WRONG — the address describes the screen
+navigator().push(AppRoute::Configurator { plan_id, options, discount_pct });
+```
+
+### The address — only what the server needs
+
+**The query string carries only what the server needs on every request** — e.g. a discount id. It is put into the state in `new()` like everything else (the `link` above), and render checks that it applies to what is being drawn:
+
+```rust
+// a discount tied to another plan is not applied to this one
+let discount = cs_ra.discount_for(plan);
+```
+
+**Never a value the screen states as a fact** — a price, a discount size: the address bar is editable. The id travels in the address; the figure comes from the server.
+
+**A record belongs to the address it was created at.** The same address is a refresh — the record stands. Another address that names something else starts a new record:
+
+```rust
+impl ConfiguratorRecord {
+    pub fn for_link(stored: Option<Self>, link: &ConfiguratorLink) -> Option<Self> {
+        stored.filter(|record| record.link == *link)
+    }
+}
+```
+
+### What storage cannot hold — the first picture waits
+
+What is not in storage arrives from the server through `DataState` (§10). The first picture **waits for exactly that part** (a skeleton until it lands) — it is never drawn without it and then corrected. The wait has a ceiling:
+
+```rust
+// state.rs — new() sets awaits_discount = !link.discount_id.is_empty()
+impl ComponentState {
+    // Everything that decides the first picture is in hand
+    pub fn ready_to_paint(&self) -> bool {
+        self.waited_out || !self.awaits_discount
+    }
+
+    pub fn discount_landed(&mut self, discount: Option<DiscountModel>) {
+        self.discount.set_loaded(discount);
+        self.awaits_discount = false;
+    }
+
+    // The ceiling was reached — draw what there is
+    pub fn stop_waiting(&mut self) {
+        self.waited_out = true;
+    }
+}
+
+// render.rs — every read the first picture needs is started BEFORE the first early return
+start_discount_read(cs, &cs_ra); // spawns on RenderState::None, as in §10
+let plans = match get_plans(cs, &cs_ra) {
+    Ok(plans) => plans,
+    Err(el) => return el,
+};
+if !cs_ra.ready_to_paint() {
+    return render_loading();
+}
+
+// actions.rs — the ceiling, armed in the same RenderState::None arm that starts the read
+spawn(async move {
+    dioxus_utils::js::sleep(std::time::Duration::from_secs(3)).await;
+    if !cs.peek().ready_to_paint() {
+        cs.write().stop_waiting();
+    }
+});
+```
+
+### Storage is a copy — when the server holds the same data
+
+If the same data also lives on the server (a draft the server keeps), add `#[serde(default)] pub sent: bool` to the record — *the server holds exactly this*. Every method that changes the record clears it, a confirmed write to the server sets it; both go through `persist()`. When the server's copy arrives beside the state:
+
+| `sent` | Server's copy | Which one stands |
+| --- | --- | --- |
+| any | the same | Nothing moves |
+| `false` | differs | The local one — the server was never told, so it is newer; send it |
+| `true` | differs | The server's — it was changed elsewhere (another tab, another device); put it into the state |
+
+A state created with no record, while the server may hold one, waits for the server's copy before the first picture — the same rule as above.

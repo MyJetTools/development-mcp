@@ -31,3 +31,5 @@ pub fn clear_tokens() {
     let _ = storage.remove_item(REFRESH_TOKEN_KEY);
 }
 ```
+
+For screen state kept in browser storage — a state initialised from `sessionStorage` / `localStorage`, write-through, navigating with data — see **dioxus-design-patterns** (`get_dioxus_design_patterns`) §18.

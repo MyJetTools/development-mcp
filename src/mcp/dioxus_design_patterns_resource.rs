@@ -8,14 +8,14 @@ impl DioxusDesignPatternsResource {
     pub const URL: &'static str = "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/dioxus-design-patterns.md";
     pub const TOOL_FN: &'static str = "get_dioxus_design_patterns";
     pub const TOOL_DESCRIPTION: &'static str =
-        "Fetch Dioxus design patterns resource content (framework-level conventions for fullstack and client-side projects: dialogs, state, components, signals)";
+        "Fetch Dioxus design patterns resource content (framework-level conventions for fullstack and client-side projects: dialogs, state, components, signals, state initialised from browser storage - sessionStorage / localStorage)";
 }
 
 impl ResourceDefinition for DioxusDesignPatternsResource {
     const RESOURCE_URI: &'static str = "resource://dioxus-design-patterns";
     const RESOURCE_NAME: &'static str = "Dioxus Design Patterns";
     const DESCRIPTION: &'static str =
-        "Framework-level Dioxus conventions: ComponentState, signals, dialogs (DialogState + RenderDialog + dialog_template), DataState, async data loading, CSS pipeline";
+        "Framework-level Dioxus conventions: ComponentState, signals, dialogs (DialogState + RenderDialog + dialog_template), DataState, async data loading, CSS pipeline, state initialised from browser storage (sessionStorage / localStorage)";
     const MIME_TYPE: &'static str = "text/markdown";
 }
 
