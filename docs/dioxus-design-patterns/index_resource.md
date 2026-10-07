@@ -1058,9 +1058,10 @@ rsx! {
         onwheel: {
             let chart = chart.clone();
             move |e: Event<WheelData>| {
-                let travel = e.data().delta().strip_units();
+                // In pixels, whatever unit the browser sent — `wheel_px` is in the topic `canvas`
+                let (dx, dy) = wheel_px(e.data().delta());
                 // `true` — the wheel was the chart's, and the page must not scroll with it
-                if chart.wheel(travel.x, travel.y, e.data().element_coordinates().x) {
+                if chart.wheel(dx, dy, e.data().element_coordinates().x) {
                     e.prevent_default();
                 }
             }
@@ -1071,7 +1072,9 @@ rsx! {
 
 **The full pattern is the topic `canvas` — read it before writing or changing anything that draws on a `<canvas>` (the 2D context, WebGL, WebGPU):** `get_dioxus_design_patterns` with `topic: "canvas"`, or `resource://dioxus-design-patterns/canvas`.
 
-Inside: the engine and its single frame (`frame_pending`, `Closure::once_into_js`), why a frame touches no signal (the localization and the theme are handed over from `use_effect`, `use_drop` raises `dropped`), why `width` / `height` are never rendered on the canvas (the frame sets CSS px × `devicePixelRatio`), the redraw after the font loads, colours through CSS aliases and `getComputedStyle`, and the model with no framework in it that holds everything the frame decides — with tests.
+Inside: the engine and its single frame (`frame_pending`, `Closure::once_into_js`), tweens stepped by the frame's time, a wheel delta turned into pixels, one canvas id per instance, why a frame touches no signal (the localization and the theme are handed over from `use_effect`, `use_drop` raises `dropped`), what the markup takes back from the picture, another series shown in place under an epoch, why `width` / `height` are never rendered on the canvas (the frame sets CSS px × `devicePixelRatio`), the redraw after the font loads, colours through CSS aliases and `getComputedStyle`, the model with no framework in it that holds everything the frame decides — with tests — and several canvases that draw the same thing.
+
+Two more topics are built on it: `canvas-input` — a canvas that is dragged, zoomed by a wheel, touched, or clicked on what is drawn — and `canvas-webgl` — a picture drawn by WebGL.
 
 ## Topics
 
@@ -1079,4 +1082,6 @@ Read a topic: `resource://dioxus-design-patterns/{topic}`, or `get_dioxus_design
 
 | Topic | What is inside |
 | --- | --- |
-| [`canvas`](canvas.md) | A component that draws on a `<canvas>` — the 2D context, WebGL, WebGPU; §19 in full: the engine outside signals and its single animation frame, a state that holds only what the markup shows, a frame that touches no signal, the canvas size set by the frame, the redraw after the font loads, colours through CSS aliases, the model with no framework in it |
+| [`canvas`](canvas.md) | A component that draws on a `<canvas>` — the 2D context, WebGL, WebGPU; §19 in full: the engine outside signals and its single animation frame, tweens, a state that holds only what the markup shows and what it takes back from the picture, another series shown in place, a frame that touches no signal, the canvas size set by the frame, the redraw after the font loads, colours through CSS aliases, the model with no framework in it, several canvases that draw the same thing |
+| [`canvas-input`](canvas-input.md) | A canvas that is dragged, zoomed by a wheel, touched, or clicked on what is drawn — built on `canvas`: a drag as a gesture in the model (the threshold, the click after it, a release that was not heard), wheel travel counted in steps, `touch-action` and `touchcancel`, a pinch, a click tested against what the last frame drew, the cursor |
+| [`canvas-webgl`](canvas-webgl.md) | A picture drawn by WebGL — built on `canvas`: a 2D canvas for text over the WebGL one, one kind of context per canvas, a 2D painter of the same picture for a context that cannot be created or was lost, blending that keeps the frame opaque, one mesh and one draw call, colours as numbers |

@@ -25,9 +25,16 @@ views/chart/
 
 The rule is about the `<canvas>` element, not about the 2D context: a WebGL / WebGPU surface is the same tag that never changes. The engine, the single frame, the markup-only state, the size set by the frame and the model apply to it as written. The examples below use the 2D context.
 
+Two things have a topic of their own, each built on this one — `get_dioxus_design_patterns` with that `topic`:
+
+| Topic | Read it when |
+| --- | --- |
+| `canvas-input` | The canvas is dragged, zoomed by a wheel, touched, or clicked on what is drawn |
+| `canvas-webgl` | The picture is drawn by WebGL |
+
 ## 1) What the picture is drawn from lives outside signals — in the engine
 
-The data, the scroll, the zoom, the pointer: all of it is in an `Rc<RefCell<Engine>>` created once by `use_hook`. The handlers on the canvas — wheel, pointer, resize — call the engine and **write to no signal**.
+The data, the scroll, the zoom, the pointer: all of it is in an `Rc<RefCell<Engine>>` created once by `use_hook`. The handlers on the canvas — wheel, pointer, resize — call the engine and **write to no signal** (the one thing a handler may write is the copy of what the markup itself shows — see 3).
 
 ```rust
 // engine.rs
@@ -71,9 +78,10 @@ pub fn Chart(instrument_id: String) -> Element {
             onwheel: {
                 let chart = chart.clone();
                 move |e: Event<WheelData>| {
-                    let travel = e.data().delta().strip_units();
+                    // In pixels, whatever unit the browser sent — see below
+                    let (dx, dy) = wheel_px(e.data().delta());
                     // `true` — the wheel was the chart's, and the page must not scroll with it
-                    if chart.wheel(travel.x, travel.y, e.data().element_coordinates().x) {
+                    if chart.wheel(dx, dy, e.data().element_coordinates().x) {
                         e.prevent_default();
                     }
                 }
@@ -89,6 +97,49 @@ pub fn Chart(instrument_id: String) -> Element {
     }
 }
 ```
+
+**A wheel does not always speak pixels.** `delta()` comes in pixels, lines or pages — Firefox reports a mouse wheel in lines — and `strip_units()` throws the unit away: three lines become three pixels, and the same notch moves the picture some thirty times less in one browser than in another. Convert it before the engine sees it:
+
+```rust
+// ✅ CORRECT — render.rs
+use dioxus::html::geometry::WheelDelta;
+
+/// Wheel travel in pixels. A line is taken as 40px and a page as 800px — what a browser
+/// that reports pixels sends for the same notch
+fn wheel_px(delta: WheelDelta) -> (f64, f64) {
+    let unit_px = match delta {
+        WheelDelta::Pixels(_) => 1.0,
+        WheelDelta::Lines(_) => 40.0,
+        WheelDelta::Pages(_) => 800.0,
+    };
+
+    let travel = delta.strip_units();
+    (travel.x * unit_px, travel.y * unit_px)
+}
+```
+
+```rust
+// ❌ WRONG — the unit is thrown away: a notch that is about 100 in Chromium arrives as 3 in Firefox
+let travel = e.data().delta().strip_units();
+chart.wheel(travel.x, travel.y, e.data().element_coordinates().x);
+```
+
+**One id per instance.** The frame finds its canvas by id (see 4), so two canvases with one id are one canvas to it: both engines draw on whichever comes first in the document. A constant is right only for a canvas the page holds once. A component that can be on the page twice — two charts side by side, the same chart in a dialog over the page — numbers its instances:
+
+```rust
+// ✅ CORRECT — render.rs: a canvas that can be on the page more than once
+let canvas_id: Rc<str> = use_hook(|| {
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    format!("chart-{}", NEXT.fetch_add(1, Ordering::Relaxed)).into()
+});
+let chart = use_hook(|| ChartHandle::new(canvas_id.clone()));
+
+rsx! {
+    canvas { id: "{canvas_id}", class: "chart__canvas" }
+}
+```
+
+The engine then keeps its id as an `Rc<str>` instead of a `&'static str`.
 
 ## 2) Every change asks for ONE `requestAnimationFrame`
 
@@ -165,8 +216,98 @@ impl ChartHandle {
 ```
 
 - **The frame draws everything, every time**, from the engine as it stands. Nothing is kept from the frame before — a picture assembled from what was already on the canvas goes wrong the first time two things change at once.
+- **A frame with nothing to draw still clears.** The series was dropped, the read has not answered yet — the frame draws the empty chart. A frame that returns early leaves the last picture standing: unlike markup, a canvas does not go blank when its data does, and the previous instrument's candles stay under the new title until the new ones land.
 - The `borrow_mut()` is released before `request_frame()` is called — a borrow held across it panics with `already borrowed`.
-- **Tweens** (a value animated towards its target): the frame asks for the next frame while anything is still moving. It is still one live loop per canvas — a `loop_running` flag, never a second closure — and it stops when nothing is animating.
+- **A change that forgot its frame is invisible while data keeps arriving** — the next tick repaints and hides it. Try every control with the feed stopped: a closed market, a canvas nobody touches. Whatever then shows up only "on the next tick" is a missing `request_frame()`.
+
+### Tweens
+
+A tween is a value animated towards its target. The frame that moved one asks for the next frame, and stops asking when nothing is moving. It is still ONE loop per canvas — never a second closure: `frame_pending` already refuses a second frame, so a change that arrives mid-tween rides the loop that is running.
+
+A tween is stepped by the **time the browser hands the frame**, never by the count of frames — a 120Hz screen calls twice as often. And a step is capped: a tab in the background gets no frames at all, and comes back with minutes.
+
+```rust
+// ✅ CORRECT — engine.rs, in request_frame(): the frame takes its time from the browser
+let chart = self.clone();
+
+let frame = Closure::once_into_js(move |now_ms: f64| {
+    let moving = {
+        let mut engine = chart.0.borrow_mut();
+        engine.frame_pending = false;
+
+        if engine.dropped {
+            return;
+        }
+
+        let moving = engine.model.animate(now_ms);
+        paint::paint(&mut engine);
+        moving
+    };
+
+    // Still on its way — the next frame. The borrow is released by now
+    if moving {
+        chart.request_frame();
+    }
+});
+```
+
+```rust
+// ✅ CORRECT — the model: no clock of its own, the time comes in
+const MAX_STEP_MS: f64 = 50.0;
+
+pub struct Tween {
+    pub actual: f64,  // what is drawn
+    pub target: f64,  // where it is going
+    duration_ms: f64, // how long a run takes
+    elapsed_ms: f64,
+    last_ms: Option<f64>,
+}
+
+impl Tween {
+    pub fn set_target(&mut self, target: f64) {
+        if target != self.target {
+            self.target = target;
+            self.elapsed_ms = 0.0;
+        }
+    }
+
+    /// `true` while it has not arrived
+    pub fn step(&mut self, now_ms: f64) -> bool {
+        // The first step of a run covers no time, and no step covers more than MAX_STEP_MS
+        let dt_ms = self.last_ms.map_or(0.0, |last| (now_ms - last).clamp(0.0, MAX_STEP_MS));
+        let left_ms = self.duration_ms - self.elapsed_ms;
+
+        if self.actual == self.target || dt_ms >= left_ms {
+            self.actual = self.target;
+            // The next run starts its own clock — not from the end of this one
+            self.last_ms = None;
+            return false;
+        }
+
+        // The share of what is left that this step is of the time left — a constant speed
+        self.actual += (self.target - self.actual) * (dt_ms / left_ms);
+        self.elapsed_ms += dt_ms;
+        self.last_ms = Some(now_ms);
+        true
+    }
+}
+
+impl ChartModel {
+    /// Steps every tween. `true` while any of them is still moving
+    pub fn animate(&mut self, now_ms: f64) -> bool {
+        // `|`, not `||`: a tween that is not stepped while another one moves stands still
+        self.view.scroll.step(now_ms) | self.view.candle_width.step(now_ms)
+    }
+}
+```
+
+```rust
+// ❌ WRONG — a fixed share per frame: twice as fast at 120Hz as at 60Hz, and it never arrives,
+// so the loop never stops
+self.actual += (self.target - self.actual) * 0.2;
+```
+
+A handler sets a `target`; what a frame draws is `actual`.
 
 ## 3) The component's signal holds only what the markup shows
 
@@ -219,6 +360,141 @@ pub struct ComponentState {
     pointer: Option<(f64, f64)>,
 }
 ```
+
+### What the markup takes back from the picture
+
+Some markup follows the picture: the cursor of a drag, a "back to the newest" button that appears once the view is scrolled away. It is decided in the engine and stated on both sides, like the pressed button above: the state holds a **copy**, kept to exactly what the markup shows.
+
+```rust
+// ✅ CORRECT — state.rs
+/// What the markup takes from the picture. Nothing the canvas alone needs: the pointer's
+/// position here would re-render the markup on every move
+#[derive(Clone, Copy, PartialEq, Default)]
+pub struct Shown {
+    pub cursor: Cursor,
+    pub back_to_newest: bool,
+}
+
+pub struct ComponentState {
+    size: CandleSize,
+    data: DataState<()>,
+    shown: Shown,
+}
+```
+
+```rust
+// ✅ CORRECT — actions.rs: called by a canvas handler, after its call into the engine
+pub fn sync_shown(mut cs: Signal<ComponentState>, chart: &ChartHandle) {
+    let shown = chart.shown();
+
+    // `peek()`: a pointer move that changed nothing writes nothing
+    if cs.peek().shown != shown {
+        cs.write().set_shown(shown);
+    }
+}
+```
+
+```rust
+// render.rs
+onpointermove: {
+    let chart = chart.clone();
+    move |e: Event<PointerData>| {
+        let at = e.data().element_coordinates();
+        chart.pointer_move(at.x, at.y);
+        sync_shown(cs, &chart);
+    }
+},
+```
+
+- It is written by the **handler**, never by the frame: a handler runs in a Dioxus scope, a frame does not (see 4).
+- The engine answers it from where the picture is **going** — the targets of its tweens — so it is known when the handler returns, not when the tween ends.
+- A value the parent keeps — the zoom a wheel reached, to be stored — goes up the same way: an `EventHandler` prop, called from the handler.
+
+### The same component, another series
+
+The read above is all a canvas needs when it shows one thing for as long as it is mounted. A component that is given another `instrument_id` is not mounted again: `use_hook` ran once, the engine still holds the previous series — and a canvas, unlike markup, goes on showing it. So every render tells the engine what the props name, and the engine answers when that is not the series it holds. That answer — not `RenderState::None` — is what starts the read, and `land()` takes the epoch the read was started under.
+
+```rust
+// ✅ CORRECT — render.rs: not a signal — a plain call in the render body
+if let Some(epoch) = chart.show(&instrument_id) {
+    read(cs, chart.clone(), instrument_id.clone(), epoch);
+}
+```
+
+```rust
+// ✅ CORRECT — engine.rs
+impl ChartHandle {
+    /// What the props name. `Some(epoch)` — it is not the series held: that one was dropped,
+    /// a frame was asked for, and the read of the new one has to land under this epoch
+    pub fn show(&self, series_id: &str) -> Option<u64> {
+        let epoch = {
+            let mut engine = self.0.borrow_mut();
+
+            if engine.series_id.as_deref() == Some(series_id) {
+                return None;
+            }
+
+            engine.series_id = Some(series_id.to_string());
+            engine.epoch += 1;
+            engine.model.clear();
+            engine.epoch
+        };
+
+        // Draws the empty chart: the previous series must not stand until the new one lands
+        self.request_frame();
+        Some(epoch)
+    }
+
+    /// Data arrived. `false` — the props have named another series since: it is dropped
+    pub fn land(&self, epoch: u64, series: CandleSeries) -> bool {
+        if self.0.borrow().epoch != epoch {
+            return false;
+        }
+
+        self.change(|model| model.land(series));
+        true
+    }
+
+    pub fn shows(&self, epoch: u64) -> bool {
+        self.0.borrow().epoch == epoch
+    }
+}
+```
+
+```rust
+// ✅ CORRECT — actions.rs
+pub fn read(mut cs: Signal<ComponentState>, chart: ChartHandle, instrument_id: String, epoch: u64) {
+    spawn(async move {
+        cs.write().data.set_loading();
+
+        match crate::api::charts::get_candles(instrument_id).await {
+            Ok(series) => {
+                if chart.land(epoch, series) {
+                    cs.write().data.set_loaded(());
+                }
+            }
+            Err(err) => {
+                if chart.shows(epoch) {
+                    cs.write().data.set_error(err.to_string());
+                }
+            }
+        }
+    });
+}
+```
+
+```rust
+// ❌ WRONG — props that can name another series, and a read that lands whatever it brought:
+// the answer for the previous instrument, arriving late, becomes the new chart
+Ok(series) => {
+    cs.write().data.set_loaded(());
+    chart.land(series);
+}
+```
+
+- **Every answer lands under the epoch it was asked with** — the first read, a retry, a page of older data. The engine outlives each of them.
+- A read that failed is asked again by whoever shows the error — a button, or the read's own pause and retry — under the same epoch. No later render starts it.
+- Mounting the component again instead — `key: "{instrument_id}"` where it is used — also gives the new series an empty canvas, at the price of a new canvas and a new engine for every change. A WebGL canvas is never given its data that way: topic `canvas-webgl`.
 
 ## 4) A frame reads no signal and writes none
 
@@ -324,6 +600,9 @@ ctx.clear_rect(0.0, 0.0, width, height);
 ```
 
 Not measured yet (`width <= 0.0`) — the frame draws nothing; the resize that measures the canvas asks for a frame of its own.
+
+- **The data and the size arrive in either order.** Nothing that depends on the size is decided when the data lands — a first fit made then is made to a width of zero. It is made by the first frame that has both.
+- **The context keeps its state from one frame to the next** — a dash, an alpha, a clip. Clearing does not reset it; assigning the size would, and that is what this section avoids. So whatever a frame sets, it puts back: `save()` / `restore()` around a clip, the dash and the alpha returned to their defaults by the code that changed them.
 
 ## 6) A canvas is not redrawn when its font arrives
 
@@ -500,6 +779,72 @@ Each wheel notch and each pointer report is a write: a re-render of a tag that d
 
 A toolbar outside the canvas component notifies it through `NotifyChildComponent` (dioxus-design-patterns §14). `on_notify` hands the change to the engine, and the engine asks for a frame — nothing is painted inside the notification, and nothing is drawn from `cs.read()`.
 
+## Several canvases that draw the same thing
+
+A level drawn on one chart belongs to every chart of that instrument on the page. The others are not children of the one that changed, and a signal cannot redraw them: a write re-renders markup, and the picture is not markup. So every live engine is listed, by its canvas id, for exactly as long as its component is mounted — and whoever changes what they share asks each of them for a frame.
+
+```rust
+// ✅ CORRECT — engine.rs
+thread_local! {
+    /// Every chart that is on the page, by its canvas id
+    static LIVE: RefCell<HashMap<Rc<str>, ChartHandle>> = RefCell::new(HashMap::new());
+}
+
+impl ChartHandle {
+    /// On the page from now on. Called once, from `use_hook`
+    pub fn register(&self) {
+        let canvas_id = self.0.borrow().canvas_id.clone();
+        LIVE.with(|live| live.borrow_mut().insert(canvas_id, self.clone()));
+    }
+
+    /// The component left the screen
+    pub fn dropped(&self) {
+        let canvas_id = {
+            let mut engine = self.0.borrow_mut();
+            engine.dropped = true;
+            engine.canvas_id.clone()
+        };
+
+        // The list never holds the engine of a canvas that is gone
+        LIVE.with(|live| live.borrow_mut().remove(&canvas_id));
+    }
+}
+
+/// What the charts share has changed — each of them draws it
+pub fn request_frame_on_all() {
+    // Taken out of the list first: no engine is called while the list is borrowed
+    let live: Vec<ChartHandle> = LIVE.with(|live| live.borrow().values().cloned().collect());
+
+    for chart in live {
+        chart.request_frame();
+    }
+}
+
+/// One chart, by its canvas id — for a listener set on the canvas element itself
+pub fn request_frame_for(canvas_id: &str) {
+    let chart = LIVE.with(|live| live.borrow().get(canvas_id).cloned());
+
+    if let Some(chart) = chart {
+        chart.request_frame();
+    }
+}
+```
+
+```rust
+// render.rs
+use_hook({
+    let chart = chart.clone();
+    move || chart.register()
+});
+
+use_drop({
+    let chart = chart.clone();
+    move || chart.dropped()
+});
+```
+
+A listener the engine sets on its own canvas element finds the engine the same way — by the id. A closure the engine keeps must not hold the engine's own handle: the two would keep each other alive after the component is gone (topic `canvas-webgl`, the lost context).
+
 ## Cargo
 
 `wasm-bindgen`, `wasm-bindgen-futures` and `web-sys` with the features `Window`, `Document`, `Element`, `HtmlCanvasElement`, `CanvasRenderingContext2d`, `CssStyleDeclaration` (the colours), `FontFaceSet` (`document.fonts`), `TextMetrics` (measuring a label).
@@ -507,11 +852,18 @@ A toolbar outside the canvas component notifies it through `NotifyChildComponent
 ## Checklist
 
 1. Nothing the picture is drawn from is in a signal — `Rc<RefCell<Engine>>` from `use_hook`
-2. The canvas handlers call the engine and write to no signal
-3. Every change goes through `request_frame()` — one `requestAnimationFrame`, guarded by `frame_pending`
-4. `ComponentState` holds only what the markup shows — the pressed button, `DataState<()>` of the read
-5. The frame touches no signal — the localization and the theme are handed over from `use_effect`, `use_drop` raises `dropped`
-6. No `width` / `height` on the `canvas` in `rsx!` — the frame sets CSS px × `devicePixelRatio`, only when it differs
-7. `document.fonts.load(font)`, then one more frame
-8. The colours are CSS aliases read with `getComputedStyle`, dropped when the theme changes
-9. What the frame decides is in a model with no framework in it, and it is tested
+2. The canvas handlers call the engine and write to no signal — but the copy of what the markup itself shows, and only when it differs (`peek()` first)
+3. The canvas id is one per instance when the component can be on the page twice
+4. A wheel delta is turned into pixels by its unit before the engine sees it
+5. Every change goes through `request_frame()` — one `requestAnimationFrame`, guarded by `frame_pending` — and every control was tried with the feed stopped
+6. A frame with nothing to draw still clears the canvas
+7. A tween is stepped by the time the browser hands the frame, capped — never by the count of frames
+8. `ComponentState` holds only what the markup shows — the pressed button, `DataState<()>` of the read
+9. Props that can name another series: the engine is told on every render, and a read lands only under the epoch it was started with
+10. The frame touches no signal — the localization and the theme are handed over from `use_effect`, `use_drop` raises `dropped`
+11. No `width` / `height` on the `canvas` in `rsx!` — the frame sets CSS px × `devicePixelRatio`, only when it differs; what a frame sets on the context, it puts back
+12. `document.fonts.load(font)`, then one more frame
+13. The colours are CSS aliases read with `getComputedStyle`, dropped when the theme changes
+14. What the frame decides is in a model with no framework in it, and it is tested
+15. Canvases that draw the same thing are listed while they are mounted, and each is asked for its own frame
+16. Drags, the steps of a wheel, touch and clicks on what is drawn — topic `canvas-input`; WebGL — topic `canvas-webgl`

@@ -357,7 +357,7 @@ mod tests {
                 doc.docs_url
             );
 
-            let mut files: Vec<String> = std::fs::read_dir(&dir)
+            let files: Vec<String> = std::fs::read_dir(&dir)
                 .unwrap()
                 .map(|entry| entry.unwrap().file_name().into_string().unwrap())
                 .filter(|name| name != "index_resource.md")
@@ -379,12 +379,14 @@ mod tests {
                 );
             }
 
-            listed.sort();
-            files.sort();
-            let files: Vec<String> = files
+            // Sorted as topics, not as file names: `canvas-input.md` goes before
+            // `canvas.md`, and the topic `canvas-input` after `canvas`.
+            let mut files: Vec<String> = files
                 .into_iter()
                 .map(|file| file.strip_suffix(".md").unwrap().to_string())
                 .collect();
+            listed.sort();
+            files.sort();
             assert_eq!(listed, files, "{}", doc.docs_url);
         }
     }
