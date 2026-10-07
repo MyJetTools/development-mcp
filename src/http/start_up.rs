@@ -42,6 +42,7 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource_template(Arc::new(RustExtensionsTopicResource::default()));
     mcp.register_resource(Arc::new(ServiceSdkResource));
     mcp.register_resource(Arc::new(DioxusDesignPatternsResource));
+    mcp.register_resource_template(Arc::new(DioxusDesignPatternsTopicResource::default()));
     mcp.register_resource(Arc::new(DioxusFullstackPatternsResource));
     mcp.register_resource(Arc::new(MyNoSqlEntityPatternsResource));
     mcp.register_resource(Arc::new(MyGrpcExtensionsResource));
@@ -79,7 +80,8 @@ pub async fn start(app: &Arc<AppContext>) {
     let rust_extensions_tool = Arc::new(RustExtensionsReadmeTool::new(app.clone()));
     mcp.register_tool_call(rust_extensions_tool.clone());
     mcp.register_tool_call(Arc::new(ServiceSdkReadmeTool::new(app.clone())));
-    mcp.register_tool_call(Arc::new(DioxusDesignPatternsTool::new(app.clone())));
+    let dioxus_design_patterns_tool = Arc::new(DioxusDesignPatternsTool::new(app.clone()));
+    mcp.register_tool_call(dioxus_design_patterns_tool.clone());
     mcp.register_tool_call(Arc::new(DioxusFullstackPatternsTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(MyNoSqlEntityPatternsTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(MyGrpcExtensionsReadmeTool::new(app.clone())));
@@ -120,6 +122,7 @@ pub async fn start(app: &Arc<AppContext>) {
     topics_refresh.register(&architect_playbook_tool);
     topics_refresh.register(&dioxus_client_side_bootstrap_tool);
     topics_refresh.register(&application_architecture_tool);
+    topics_refresh.register(&dioxus_design_patterns_tool);
     topics_refresh.start();
 
     http_server.start(app.app_states.clone(), my_logger::LOGGER.clone());

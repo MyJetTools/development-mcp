@@ -254,14 +254,13 @@ impl McpToolCall<EmptyToolInput, ResourceToolListResponse> for ListResourceTools
 // tools are `TopicsDocTool`, aliased next to each resource -
 // FlUrlUsageGuideTool, HttpActionsDesignGuideTool, AppBootstrapGuideTool,
 // RustExtensionsReadmeTool, ArchitectPlaybookTool, DioxusClientSideBootstrapTool,
-// ApplicationArchitectureTool.
+// ApplicationArchitectureTool, DioxusDesignPatternsTool.
 define_resource_tool!(McpDevelopmentGuideTool, McpResource);
 define_resource_tool!(DioxusBootstrapGuideTool, DioxusBootstrapResource);
 define_resource_tool!(CargoDependenciesGuideTool, CargoDependenciesResource);
 define_resource_tool!(MySshReadmeTool, MySshResource);
 define_resource_tool!(MyTcpSocketsReadmeTool, MyTcpSocketsResource);
 define_resource_tool!(ServiceSdkReadmeTool, ServiceSdkResource);
-define_resource_tool!(DioxusDesignPatternsTool, DioxusDesignPatternsResource);
 define_resource_tool!(DioxusFullstackPatternsTool, DioxusFullstackPatternsResource);
 define_resource_tool!(MyNoSqlEntityPatternsTool, MyNoSqlEntityPatternsResource);
 define_resource_tool!(MyGrpcExtensionsReadmeTool, MyGrpcExtensionsResource);

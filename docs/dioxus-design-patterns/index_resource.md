@@ -5,6 +5,8 @@ alwaysApply: false
 
 Common patterns for all Dioxus projects (fullstack and client-side). These are framework-level conventions, not project-type-specific.
 
+A pattern that needs a document of its own is a topic, listed at the end — a component that draws on a `<canvas>` is one. Read a topic: `resource://dioxus-design-patterns/{topic}`, or `get_dioxus_design_patterns` with `topic`.
+
 ## 1) Naming conventions
 
 - **`cs`** — mutable signal holding component state: `let mut cs = use_signal(|| ComponentState::new(...))`
@@ -220,7 +222,6 @@ impl ChartViewState {
             instrument_id: instrument_id.into(),
             candle_type,
             candle_style: CandleStyle::Candles,
-            zoom_idx: DEFAULT_ZOOM_IDX,
             indicators: Vec::new(),
             positions: None,
             // ... all other fields = defaults
@@ -234,7 +235,9 @@ cv.pending_mode = Some(false);
 cv.container_class = Some("mini-chart-container".to_string());
 ```
 
-When a child component needs to write back to the struct (e.g. zoom via mouse wheel), pass `Signal<Struct>` — not individual `Signal<usize>` per field.
+When a child component needs to write back to the struct (e.g. a toolbar that switches the candle style and the indicators), pass `Signal<Struct>` — not an individual `Signal` per field.
+
+**Not for a `<canvas>`**: what a wheel, a drag or the pointer changes over a canvas — the scroll, the zoom — is not state and is written to no signal. It lives in the canvas's engine and is drawn by an animation frame — see §19.
 
 ## 9) Dialogs: lifecycle, rendering, and template
 
@@ -493,23 +496,43 @@ fn ChartPanel() -> Element {
 ```rust
 #[component]
 pub fn CanvasChart(
-    mut view: Signal<ChartViewState>,
+    view: Signal<ChartViewState>,
     repaint_notify: dioxus_utils::NotifyChildComponent<()>,
 ) -> Element {
-    let mut cs = use_signal(ChartState::default);
+    // What the picture is drawn from lives in the engine, outside every signal — see §19
+    let chart = use_hook(|| ChartHandle::new(CANVAS_ID));
 
     // Subscribe to parent notifications
-    repaint_notify.on_notify(move |_| {
-        // React to parent change — e.g. repaint canvas
-        let state_ra = cs.read();
-        if state_ra.loaded {
-            do_repaint(&state_ra);
+    repaint_notify.on_notify({
+        let chart = chart.clone();
+        move |_| {
+            // React to parent change — hand it to the engine, which asks for ONE animation frame.
+            // The frame draws; nothing is painted here
+            chart.set_style(view.peek().candle_style);
         }
     });
 
     // ... render
-    rsx! { canvas { id: "chart-canvas" } }
+    rsx! { canvas { id: CANVAS_ID } }
 }
+
+// engine.rs — change the engine, then ask for a frame
+impl ChartHandle {
+    pub fn set_style(&self, style: CandleStyle) {
+        self.0.borrow_mut().candle_style = style;
+        self.request_frame();
+    }
+}
+```
+
+```rust
+// ❌ WRONG — the canvas painted from component state, inside the notification
+repaint_notify.on_notify(move |_| {
+    let cs_ra = cs.read();
+    if cs_ra.loaded {
+        do_repaint(&cs_ra);
+    }
+});
 ```
 
 ### Rules
@@ -518,6 +541,7 @@ pub fn CanvasChart(
 - `on_notify()` wraps `use_effect` — call it at the top level of the component, not inside conditions
 - Use `()` as the type parameter when the notification carries no data — just a "something changed" signal
 - For DataState reloads: `repaint_notify.on_notify(move |_| { cs.write().data.reset(); });`
+- For a `<canvas>`: `on_notify` hands the change to the engine and the engine asks for an animation frame — it never paints, and never draws from `cs.read()` (§19)
 
 ## 15) CSS — source files in `css/`, compiled by `build.rs`
 
@@ -1010,3 +1034,49 @@ let lang = *CHROME_LANG.read();
 // ❌ WRONG — storage is read on every render, and the toast is not redrawn when the language changes
 let lang = crate::web::storage::language::get_lang();
 ```
+
+## 19) A canvas is drawn by animation frames, not from state
+
+A write to a signal re-renders the HTML, and the HTML of a canvas is one `<canvas>` tag that does not change. What changes is the data under the picture — and the answer to new data is an **animation frame**, which redraws everything it needs from the data as it then stands.
+
+- What the picture is drawn from — the data, the scroll, the zoom, the pointer — lives **outside signals**: an `Rc<RefCell<Engine>>` from `use_hook`. Every change asks the engine for ONE `requestAnimationFrame`.
+- The component's signal holds only what the markup around the canvas shows — the pressed button, the `DataState` of the read.
+
+```rust
+// ❌ WRONG — the scroll and the zoom in use_signal, the canvas painted from use_effect on every write
+let mut cs = use_signal(ChartState::default);
+use_effect(move || paint(CANVAS_ID, &cs.read()));
+rsx! {
+    canvas { id: CANVAS_ID, onwheel: move |e| cs.write().zoom(&e) }
+}
+
+// ✅ CORRECT — the handler tells the engine, the engine asks for a frame; no signal is written
+let chart = use_hook(|| ChartHandle::new(CANVAS_ID));
+rsx! {
+    canvas {
+        id: CANVAS_ID,
+        onwheel: {
+            let chart = chart.clone();
+            move |e: Event<WheelData>| {
+                let travel = e.data().delta().strip_units();
+                // `true` — the wheel was the chart's, and the page must not scroll with it
+                if chart.wheel(travel.x, travel.y, e.data().element_coordinates().x) {
+                    e.prevent_default();
+                }
+            }
+        },
+    }
+}
+```
+
+**The full pattern is the topic `canvas` — read it before writing or changing anything that draws on a `<canvas>` (the 2D context, WebGL, WebGPU):** `get_dioxus_design_patterns` with `topic: "canvas"`, or `resource://dioxus-design-patterns/canvas`.
+
+Inside: the engine and its single frame (`frame_pending`, `Closure::once_into_js`), why a frame touches no signal (the localization and the theme are handed over from `use_effect`, `use_drop` raises `dropped`), why `width` / `height` are never rendered on the canvas (the frame sets CSS px × `devicePixelRatio`), the redraw after the font loads, colours through CSS aliases and `getComputedStyle`, and the model with no framework in it that holds everything the frame decides — with tests.
+
+## Topics
+
+Read a topic: `resource://dioxus-design-patterns/{topic}`, or `get_dioxus_design_patterns` with `topic`.
+
+| Topic | What is inside |
+| --- | --- |
+| [`canvas`](canvas.md) | A component that draws on a `<canvas>` — the 2D context, WebGL, WebGPU; §19 in full: the engine outside signals and its single animation frame, a state that holds only what the markup shows, a frame that touches no signal, the canvas size set by the frame, the redraw after the font loads, colours through CSS aliases, the model with no framework in it |
