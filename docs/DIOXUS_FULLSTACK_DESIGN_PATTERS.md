@@ -111,9 +111,9 @@ Wrap network calls in `spawn`. Set boolean flags before/after the await:
 spawn(async move {
     cs.write().is_checking = true;
     let resp = crate::api::items::check(id).await;
-    let mut s = cs.write();
-    s.is_checking = false;
-    s.check_result = resp.ok();
+    let mut cs_wa = cs.write();
+    cs_wa.is_checking = false;
+    cs_wa.check_result = resp.ok();
 });
 ```
 

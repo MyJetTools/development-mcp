@@ -8,8 +8,39 @@ Common patterns for all Dioxus projects (fullstack and client-side). These are f
 ## 1) Naming conventions
 
 - **`cs`** — mutable signal holding component state: `let mut cs = use_signal(|| ComponentState::new(...))`
-- **`cs_ra`** — read-access snapshot: `let cs_ra = cs.read()`
-- Use `cs` for writes (`cs.write().field = value`) and `cs_ra` for reads in the render phase.
+- **`cs_ra`** — read access: `let cs_ra = cs.read()` — taken in the render function.
+- **`cs_wa`** — write access: `let mut cs_wa = cs.write()` — taken the same way, but in event handlers and inside `spawn`, **never in the render function**.
+
+```rust
+#[component]
+fn MyComponent(id: i64) -> Element {
+    let mut cs = use_signal(ComponentState::default);
+    let cs_ra = cs.read(); // render — read access
+
+    rsx! {
+        button {
+            onclick: move |_| {
+                let mut cs_wa = cs.write(); // event — write access
+                cs_wa.select(id);
+            },
+            "Select"
+        }
+    }
+}
+
+// spawn — write access, taken after the .await
+spawn(async move {
+    let result = crate::api::items::save(id).await;
+    let mut cs_wa = cs.write();
+    cs_wa.save_finished(result);
+});
+
+// ❌ WRONG — write access in the render function: cs_ra is alive there, and the write re-triggers the render
+let mut cs_wa = cs.write();
+```
+
+- A single call may stay inline — `cs.write().select(id)` is the same write access without a name, and the same rule applies: event handlers and `spawn` only.
+- `cs_wa` never lives across an `.await` — take it after the await (or drop it before), otherwise a render in between hits the held borrow.
 
 ## 2) Single ComponentState — one struct, one signal
 
@@ -28,7 +59,7 @@ let cs_ra = cs.read();
 
 **Exception**: `Signal<T>` that must be passed to a child component which requires `Signal<T>` as a prop. In this case, keep it as a separate signal.
 
-Keep `cs_ra` alive for the entire render function — **never drop it early**. Event handlers capture `cs: Signal` (which is `Copy`), not `cs_ra`, so there's no borrow conflict.
+Keep `cs_ra` alive for the entire render function — **never drop it early**. Event handlers capture `cs: Signal` (which is `Copy`), not `cs_ra`, and take their own `cs_wa` when they run, so there's no borrow conflict.
 
 ## 3) Component folder structure — render / state / actions
 
@@ -416,7 +447,7 @@ get_account(id).await
 ## 13) Signal handling tips
 
 - Signals are `Copy` — capture once in handlers, no cloning needed.
-- Read with `.read()` for immutable snapshot; write with `.write()` to mutate.
+- Read with `.read()` in the render function (`cs_ra`); write with `.write()` in event handlers and `spawn` (`cs_wa`) — see §1.
 - In closures inside `spawn(async move { ... })`, signal is moved by copy — safe to use.
 
 ## 14) `NotifyChildComponent<TValue>` — parent-to-child notification
