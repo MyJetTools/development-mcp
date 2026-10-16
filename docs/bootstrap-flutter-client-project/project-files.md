@@ -1,4 +1,4 @@
-# Project files — pubspec.yaml, analysis_options.yaml, the bridge's configs
+# Project files — pubspec.yaml, analysis_options.yaml, the bridge's configs, CLAUDE.md
 
 The twin of the Dioxus client's `Cargo.toml`, `Dioxus.toml` and `build.rs`. Versions as of
 2026-10-16; each is pinned on purpose and moved on purpose.
@@ -170,3 +170,104 @@ targets = [
 | `test/routes_guard_test.dart` | a route the core's vocabulary does not have, or a vocabulary path the app does not declare (topic `routing`) |
 | `test/tokens_are_current_test.dart` | the CSS tokens changed and `tokens.g.dart` was not regenerated |
 | `test/chart_label_width_test.dart` | the label font no longer matches the character width the chart engine assumes (`get_flutter_design_patterns`, topic `canvas`) |
+
+## CLAUDE.md and .mcp.json — how an agent finds these docs
+
+An agent working in the repo knows these docs exist only if the repo tells it. Two files do:
+`.mcp.json` connects the documentation MCP server, and `CLAUDE.md` makes reading it the first step
+of every task. Both are committed.
+
+### .mcp.json — the server, with its key outside git
+
+```json
+{
+  "mcpServers": {
+    "dev-best-practices": {
+      "type": "http",
+      "url": "${DEV_BEST_PRACTICES_MCP_URL}"
+    }
+  }
+}
+```
+
+- **The URL carries the server's access key, so it is never written into the repo.** Claude Code
+  expands `${VAR}` in `url`, and every developer exports `DEV_BEST_PRACTICES_MCP_URL` in their
+  shell profile. When it is unset, `/mcp` shows a missing-variable warning and the server does not
+  connect.
+- **Claude Code asks each developer once to approve the project's server.**
+- The team's other servers (the task board) sit next to it the same way, each with a variable of
+  its own.
+- A developer who has the server as a claude.ai connector needs no `.mcp.json`; the tools then
+  carry the connector's prefix, which `CLAUDE.md` allows for.
+
+### CLAUDE.md — the docs first, then only what the docs cannot know
+
+````markdown
+# CLAUDE.md
+
+<App> — the phone client (iOS / Android) of <product>, the twin of the Dioxus client in
+<path of the Dioxus client>. The logic is the shared Rust core in <path of the core crate>; this
+app is its UI and its I/O.
+
+## MyJetTools docs — MANDATORY
+
+Before writing any code, call `list_resource_tools` of the MyJetTools documentation MCP server:
+`mcp__dev-best-practices__list_resource_tools` with this repo's `.mcp.json`; through a claude.ai
+connector the prefix differs — look for the tool whose name ends in `list_resource_tools`. Then
+read what the task touches, fresh in every session, never from memory:
+
+| The task touches | Read |
+|---|---|
+| anything in this app | `get_flutter_client_bootstrap_guide` — the index, then the topic of the part being changed (`rust-core`, `bridge`, `io`, `api-calls`, `websocket`, `local-storage`, `routing`, `ci`, …) |
+| a widget, a screen, a dialog, a state class, a test | `get_flutter_design_patterns` — the index, then `canvas`, `theme`, `performance`, `accessibility` or `testing` |
+| a feature ported from the Dioxus client | the same section in `get_dioxus_design_patterns` / `get_dioxus_client_side_bootstrap_guide` — the numbers match |
+| Rust — the core, the bridge crate | `get_application_architecture_best_practices`, `get_performance_considerations` |
+| a Rust dependency | `get_cargo_dependencies_guide` |
+
+## Hard rules
+
+1. **The logic is the core's.** A number, a word, a URL, a stored key or a feed rule written in
+   Dart is a second implementation. A port that needs an `if` deciding one goes back to the core
+   first.
+2. **All I/O is Dart's, and none of it decides anything.** Every call that can change the core
+   goes through `host.run(..)`; the core is called from the main isolate only.
+3. **Generated files are never edited** — `lib/bridge/**`, `rust/src/frb_generated.rs`,
+   `lib/theme/tokens.g.dart`, `**/*.freezed.dart`: change the source and regenerate.
+4. **Zero warnings** — `flutter analyze --fatal-infos --fatal-warnings` and
+   `cargo clippy -- -D warnings`; never `// ignore:` or `#[allow(..)]` as a fix.
+5. **No colour or size literal in a widget** — tokens only.
+6. **A store upload, a version bump or a release tag only when asked.**
+
+## Commands
+
+```bash
+flutter_rust_bridge_codegen generate   # after any change in rust/src/api
+dart run tool/gen_tokens.dart          # after any change in the Dioxus client's CSS tokens
+flutter run                            # a change in rust/ needs a full re-run:
+                                       # hot reload and hot restart keep the old library
+```
+
+Before every commit — all of them (the full list: `get_flutter_client_bootstrap_guide`, topic
+`ci`):
+
+```bash
+flutter analyze --fatal-infos --fatal-warnings
+dart format --output=none --set-exit-if-changed .
+flutter test
+(cd rust && cargo test && cargo clippy -- -D warnings)
+```
+
+A change in the core is built for the web too: `dx build` in the Dioxus client.
+
+## This project
+
+- Brands: `flavors/<brand>.json` — <the brands>
+- The Dioxus client: <path>; the core: <path>; the CSS tokens: <path>
+- <what the docs cannot know: a server quirk, the staging host, the demo account>
+````
+
+- **`CLAUDE.md` points to the docs; it does not copy them.** The docs are read fresh, and a rule
+  copied out of them into `CLAUDE.md` drifts from the day it is copied. `CLAUDE.md` holds the hard
+  rules in one line each, the commands, and what only this project knows.
+- **The placeholders are filled when the project is created** — the paths, the brands, the staging
+  host. A `CLAUDE.md` with a `<…>` left in it is not finished.

@@ -101,6 +101,8 @@ their name say why.
 
 ```
 project-root/                          ← the Dioxus client's project-root/
+├── CLAUDE.md                          ← (new) the agent's entry: the docs to read first, the hard rules — topic `project-files`
+├── .mcp.json                          ← (new) the documentation MCP server; its URL from the environment
 ├── pubspec.yaml                       ← Cargo.toml + Dioxus.toml (name, version, deps, assets, fonts)
 ├── analysis_options.yaml              ← #![deny(warnings)] + clippy — the zero-warnings policy
 ├── flutter_rust_bridge.yaml           ← (new) the bridge's codegen config — topic `bridge`
@@ -241,7 +243,7 @@ them in the order of the table; a change to one part needs only its topic. Read 
 
 | Topic | What is inside |
 | --- | --- |
-| [`project-files`](project-files.md) | `pubspec.yaml`, `analysis_options.yaml`, `flutter_rust_bridge.yaml`, `rust-toolchain.toml` and the pinned versions of everything |
+| [`project-files`](project-files.md) | `pubspec.yaml`, `analysis_options.yaml`, `flutter_rust_bridge.yaml`, `rust-toolchain.toml` and the pinned versions of everything; `CLAUDE.md` and `.mcp.json` — how an agent finds these docs |
 | [`rust-core`](rust-core.md) | The shared core without I/O: what goes in, inputs and effects, requests built and read in the core, the socket and storage held by the host, one thread, features, tests, moving an existing Dioxus client's logic in |
 | [`bridge`](bridge.md) | The FRB bridge crate: layout, everything synchronous, types, opaque per-screen structs, effects taken after every call, errors and panics, start-up, hot restart, codegen |
 | [`io`](io.md) | The I/O stack — HTTP, WebSocket, storage, timers, one platform class each — the core's host `core_host.dart` and the effect dispatcher |
