@@ -9,7 +9,8 @@ use my_logger::LogEventCtx;
 use rust_extensions::{MyTimer, MyTimerTick, RepeatTimerIteration};
 
 use crate::mcp::{
-    get_topic_name, get_topic_uri, is_topic_name, load_topic, TopicsDocDefinition, TopicsDocTool,
+    get_topic_name, get_topic_uri, is_topic_name, load_topic, scripts::read_doc_body,
+    TopicsDocDefinition, TopicsDocTool,
 };
 
 /// How often the topics table of every index is read again.
@@ -251,12 +252,11 @@ async fn fetch_index<TDoc: TopicsDocDefinition>() -> Result<String, String> {
         ));
     }
 
-    let text = response
-        .get_body_as_str()
+    let text = read_doc_body(&mut response)
         .await
         .map_err(|e| format!("Failed to read the body of {}: {:?}", url, e))?;
 
-    Ok(text.to_string())
+    Ok(text)
 }
 
 /// `resources/read` of one listed topic.

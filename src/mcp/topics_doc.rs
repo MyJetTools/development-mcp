@@ -4,7 +4,7 @@ use mcp_server_middleware::*;
 use serde::{Deserialize, Serialize};
 
 use crate::app::AppContext;
-use crate::mcp::{fetch_resource_text, DocTopics, ResourceToolResponse};
+use crate::mcp::{fetch_resource_text, scripts::read_doc_body, DocTopics, ResourceToolResponse};
 
 /// A doc split into topics: an index which lists the topics in a table, and
 /// one `{topic}.md` per topic next to it.
@@ -94,12 +94,11 @@ pub async fn load_topic<TDoc: TopicsDocDefinition>(
         }
     }
 
-    let text = response
-        .get_body_as_str()
+    let text = read_doc_body(&mut response)
         .await
         .map_err(|e| format!("Failed to read the body of {}: {:?}", url, e))?;
 
-    Ok(text.to_string())
+    Ok(text)
 }
 
 /// `{RESOURCE_URI}/{topic}` - one topic of the doc.

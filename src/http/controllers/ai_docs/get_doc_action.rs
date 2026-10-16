@@ -4,7 +4,7 @@ use my_http_server::macros::*;
 use my_http_server::*;
 
 use crate::app::AppContext;
-use crate::mcp::get_doc_url_by_filename;
+use crate::mcp::{get_doc_url_by_filename, scripts::read_doc_body};
 
 #[derive(MyHttpInput)]
 pub struct GetAiDocInputModel {
@@ -58,14 +58,13 @@ async fn handle_request(
             HttpFailResult::as_fatal_error(format!("Failed to fetch {}: {:?}", url, e))
         })?;
 
-    let content = response
-        .get_body_as_str()
+    let content = read_doc_body(&mut response)
         .await
         .map_err(|e| {
             HttpFailResult::as_fatal_error(format!("Failed to read body from {}: {:?}", url, e))
         })?;
 
-    HttpOutput::as_text(content.to_string())
+    HttpOutput::as_text(content)
         .add_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         .into_ok_result(true)
         .into()
