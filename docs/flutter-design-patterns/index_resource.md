@@ -800,6 +800,18 @@ developer reads at a cable; anything the user must know is on screen.
 `mod.dart` holds `export` lines and nothing else; one file = one class or one job; callers import a
 folder's `mod.dart`, never a file inside it.
 
+### Performance, accessibility, tests
+
+- **Watch at the leaf, build lists lazily** — `select` where the value is shown, `.builder` lists,
+  widget classes over helper methods, `const` wherever it compiles. Measured in profile mode on a
+  slow phone. Topic `performance`.
+- **Every control is labelled with the core's words, and the layout survives the system's text
+  size** — a painted chart has a description, a sheet hides the screen behind it. Topic
+  `accessibility`.
+- **Rules are tested in the core; Dart tests what Dart does** — state classes without widgets,
+  every `RenderState` of a screen, fakes at the interfaces, real phones for the bridge. Topic
+  `testing`.
+
 ## Topics
 
 Read a topic: `resource://flutter-design-patterns/{topic}`, or `get_flutter_design_patterns` with
@@ -809,3 +821,6 @@ Read a topic: `resource://flutter-design-patterns/{topic}`, or `get_flutter_desi
 | --- | --- |
 | [`canvas`](canvas.md) | A widget that draws on a canvas — a chart: the engine in the core as an opaque object, one frame per change through `CustomPainter(repaint:)`, tweens stepped by the frame's time, the frame plan across the bridge in one call, text and the engine's character width, gestures and who owns them in the gesture arena |
 | [`theme`](theme.md) | Tokens generated from the Dioxus client's CSS, the theme and the status bar, safe areas, tap targets, one scroll per screen, the keyboard, bottom sheets, haptics, what may differ between the web and the phone |
+| [`performance`](performance.md) | Rebuilds, lists and frames: measuring in profile mode on a slow phone, `select` at the leaf, widget classes and `const`, lazy `.builder` lists with keys and `itemExtent`, repaint boundaries and the effects that cost a layer, nothing heavy on the UI thread, disposing what was created |
+| [`accessibility`](accessibility.md) | Screen readers, text size, motion, contrast: labels from the core's words, one `MergeSemantics` stop per row, a described chart, sheets behind a `ModalBarrier`, text scaling and local clamps, Reduce Motion on both platforms, tap targets, the guideline tests |
+| [`testing`](testing.md) | What each level proves: rules in the core, state classes without widgets, widget tests over `testHost` / `testApp`, fakes at the interfaces, fake time, fonts in tests, goldens on one OS, `integration_test` on real phones |

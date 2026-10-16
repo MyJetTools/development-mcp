@@ -9,8 +9,10 @@ helpers. Here the halves are the core's (topic `rust-core`, section 3) and the s
 ```dart
 // lib/native/http.dart
 final class Http {
-  Http({required this.origin, required this.userAgent, required this.host})
-      : _client = platformClient(userAgent);
+  /// `client` is a test's `MockClient` (`get_flutter_design_patterns`, topic `testing`);
+  /// production passes nothing and gets the platform's client
+  Http({required this.origin, required this.userAgent, required this.host, http.Client? client})
+      : _client = client ?? platformClient(userAgent);
 
   final String origin;    // the flavor's: https://app.example.com
   final String userAgent; // the flavor's constant

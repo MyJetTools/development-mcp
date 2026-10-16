@@ -282,3 +282,4 @@ pub fn start_core(args: StartArgs) {
 - **Dart's host is tested against a mock of the bridge** — `RustLib.init(api: MockRustLibApi())`:
   given these effects, does the host send, store and navigate as it should.
 - **On a device** — `integration_test/`, with `setUpAll(() async => RustLib.init())`.
+- **Everything else Dart tests, and how** — `get_flutter_design_patterns`, topic `testing`.

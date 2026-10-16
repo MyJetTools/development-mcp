@@ -118,7 +118,7 @@ project-root/                          ← the Dioxus client's project-root/
 │   ├── rust-toolchain.toml            ←   the pinned toolchain + the six targets
 │   └── src/api/                       ←   what Dart can call — all of it synchronous
 ├── android/  ios/                     ← the shells: ids, icons, entitlements, deep links
-├── test/                              ← build.rs's guards (routes, tokens, bindings) + state tests
+├── test/                              ← build.rs's guards (routes, tokens, bindings) + state and widget tests
 ├── integration_test/                  ← on a device, with the real Rust library
 └── lib/                               ← src/
     ├── main.dart                      ← main.rs: error hooks, RustLib.init, the core's start, the router

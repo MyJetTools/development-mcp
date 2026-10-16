@@ -28,7 +28,7 @@ fixed, never skipped.
 |---|---|---|
 | analysis | `flutter analyze --fatal-infos --fatal-warnings` | any warning — the zero-warnings policy |
 | format | `dart format --output=none --set-exit-if-changed .` | unformatted code |
-| Dart tests | `flutter test` | state classes and the guard tests below |
+| Dart tests | `flutter test` | state classes, screens, accessibility and the guard tests below (`get_flutter_design_patterns`, topic `testing`) |
 | bindings current | `flutter_rust_bridge_codegen generate && git diff --exit-code -- lib/bridge rust/src/frb_generated.rs` | `rust/src/api` changed, bindings not regenerated |
 | tokens current | `test/tokens_are_current_test.dart` | the CSS tokens changed, `tokens.g.dart` not regenerated |
 | words current | `cd rust && cargo test words_are_current` | the core's localization changed, `api/words.rs` not regenerated |
