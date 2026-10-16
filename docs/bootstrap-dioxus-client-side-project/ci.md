@@ -54,10 +54,15 @@ Tag trigger: `your-project-name-*`. Two jobs: build (in `dioxus-docker` containe
 > **This is the whole CI story for a Dioxus WASM client — use the workflow below verbatim.**
 > The pre-baked builder image from the app-bootstrap guide (`get_app_bootstrap_guide`, topic `ci-monorepo`: `{service-name}-build-docker`,
 > `build-{service-name}-docker.yaml`) is for **native Rust monorepo services only**. It does not
-> apply here: this build runs `dx build --release --web` with its own toolchain inside
+> apply here: this build runs `dx build --release --web --debug-symbols false` with its own toolchain inside
 > `ghcr.io/my-jet-tools/dioxus-docker`, which already ships the toolchain the build needs. Do not add a
 > builder-image workflow, a `docker pull`/warm-cold pair of steps, or `CARGO_TARGET_DIR` juggling to
 > a Dioxus client project.
+
+The build step is the production build of the WASM optimization guide (`get_wasm_optimization_guide`):
+`--debug-symbols false`, and a `grep` that fails the build when wasm-opt fails. Keep both, and keep
+`[profile.wasm-release]` in `Cargo.toml` (topic `project-files`). Every production release goes
+through that guide's checklist first — see the release guide (`get_release_guide`).
 
 ```yaml
 name: Release App
@@ -95,10 +100,14 @@ jobs:
           cd ${DIR}
           sed -i -e 's/^version = .*/version = "${{ steps.get_version.outputs.VERSION }}"/' Cargo.toml
 
-      - run: |
+      # bash: a step without `shell` runs without pipefail, and a failed `dx build | tee` would pass
+      - shell: bash
+        run: |
           export GIT_HUB_TOKEN="${{ secrets.PUBLISH_TOKEN }}"
           cd ${DIR}
-          dx build --release --web
+          dx build --release --web --debug-symbols false 2>&1 | tee dx.log
+          # a failed wasm-opt does not fail dx - it ships the bundle unoptimised
+          if grep -q "wasm-opt failed" dx.log; then echo "wasm-opt failed - the bundle is unoptimised"; exit 1; fi
           ls ./target/dx/${APP_NAME}/release/web/public
           python3 build.py ./target/dx/${APP_NAME}/release/web/public/index.html
 

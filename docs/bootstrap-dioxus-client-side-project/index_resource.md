@@ -89,8 +89,8 @@ Every part of the skeleton is a topic. Bootstrapping a new project means going t
 # Development (hot-reload)
 dx serve --package your-project-name
 
-# Production build
-dx build --release --web --package your-project-name
+# Production build - without --debug-symbols false the bundle keeps its debug info
+dx build --release --web --debug-symbols false --package your-project-name
 
 # Check compilation (use dx, not cargo check)
 dx build --package your-project-name
@@ -115,3 +115,4 @@ dx build --package your-project-name
 13. **Parameter-less requests use `EmptyRequestModel`** — don't declare an empty `MyHttpInput` model just to satisfy `execute_request`
 14. **Never put `///` doc-comments on `MyHttpInput` / `MyHttpObjectStructure` struct fields** — the proc-macro panics; use the `description = "..."` attribute instead
 15. **`dioxus_utils::set_panic_hook()` is the first line of `main()`** — a release build prints no panic text without it, only `RuntimeError: unreachable` in the browser console
+16. **Release bundle size** — `--debug-symbols false` on every release `dx build`, and the `[profile.wasm-release]` of topic `project-files`. Why, the numbers, the build script and how to verify it: `get_wasm_optimization_guide`. Every production release goes through its checklist first (`get_release_guide`)

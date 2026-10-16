@@ -82,6 +82,15 @@ inherits = "dev"
 
 [profile.android-dev]
 inherits = "dev"
+
+# The web bundle only: dx builds it under `wasm-release` and the server under
+# `server-release`. Do not put these into [profile.release] - the server inherits it.
+# Why, and what each line gives: get_wasm_optimization_guide
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
 ```
 
 ## Dioxus.toml Setup
@@ -545,7 +554,8 @@ Rules:
 - always pass `env!("CARGO_PKG_NAME")` — never hardcode the service name;
 - add `.with_ci_test()` only if the project has at least one `#[test]`;
 - run `cargo build` once — it writes `.github/workflows/release.yaml` and `Dockerfile`. Commit both;
-- never hand-edit a generated file: the next `cargo build` overwrites it.
+- never hand-edit a generated file: the next `cargo build` overwrites it;
+- the workflow `ci-utils` 0.1.3 generates runs `dx bundle --web --release` without `--debug-symbols false`, so its bundle keeps the debug info - see `get_wasm_optimization_guide`.
 
 If the project lives in a **monorepo**, do not use `CiGenerator` — both workflow files are written by hand. Fetch the app-bootstrap guide, topic `ci-monorepo` (`get_app_bootstrap_guide`), for the templates. Note that the pre-baked builder image described there is for native Rust services: a Dioxus build runs `dx build` inside the `ghcr.io/my-jet-tools/dioxus-docker` container instead (the Dioxus client-side bootstrap guide, topic `ci`, has that workflow), so do not add a builder-image workflow to a Dioxus project.
 
@@ -562,3 +572,4 @@ If the project lives in a **monorepo**, do not use `CiGenerator` — both workfl
 - Server module structure: `server/{mod.rs, settings.rs, app/, grpc_client/}`
 - Models derive: `Debug, Serialize, Deserialize, PartialEq, Default, Clone`
 - When you check if project compiles successfully, run not only `cargo check` command but as well `dx build` and `cargo build --features server` — since it's a fullstack project, we need to build both server and client parts.
+- Every production release goes through the checklist of the WASM optimization guide (`get_wasm_optimization_guide`) first — the release guide (`get_release_guide`) has it as a step.

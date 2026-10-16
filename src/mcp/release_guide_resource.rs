@@ -8,14 +8,14 @@ impl ReleaseGuideResource {
     pub const URL: &'static str = "https://raw.githubusercontent.com/MyJetTools/development-mcp/refs/heads/main/docs/release-guide.md";
     pub const TOOL_FN: &'static str = "get_release_guide";
     pub const TOOL_DESCRIPTION: &'static str =
-        "Fetch the release guide: single-repo and monorepo release flows, gh commands, re-deploy, troubleshooting";
+        "Fetch the release guide: single-repo and monorepo release flows, gh commands, re-deploy, troubleshooting, and the step every production release of a Dioxus project goes through - an optimised .wasm (get_wasm_optimization_guide)";
 }
 
 impl ResourceDefinition for ReleaseGuideResource {
     const RESOURCE_URI: &'static str = "resource://release-guide";
     const RESOURCE_NAME: &'static str = "Release Guide";
     const DESCRIPTION: &'static str =
-        "How to create releases and deploy services: single-repo and monorepo, gh commands, re-deploy, troubleshooting";
+        "How to create releases and deploy services: single-repo and monorepo, gh commands, re-deploy, troubleshooting, the production release step of a Dioxus web bundle";
     const MIME_TYPE: &'static str = "text/markdown";
 }
 

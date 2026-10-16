@@ -178,6 +178,7 @@ pub fn all_doc_entries() -> Vec<DocCatalogEntry> {
         doc_entry!(MyJsonResource),
         doc_entry!(MyHttpUtilsResource),
         doc_entry!(MyWebSocketsWasmResource),
+        doc_entry!(WasmOptimizationResource),
     ]
 }
 
@@ -220,6 +221,7 @@ fn all_resource_tools() -> Vec<ResourceToolInfo> {
         tool_info!(MyJsonResource),
         tool_info!(MyHttpUtilsResource),
         tool_info!(MyWebSocketsWasmResource),
+        tool_info!(WasmOptimizationResource),
     ]
 }
 
@@ -280,3 +282,4 @@ define_resource_tool!(SingleVmUnixSocketTool, SingleVmUnixSocketResource);
 define_resource_tool!(MyJsonReadmeTool, MyJsonResource);
 define_resource_tool!(MyHttpUtilsReadmeTool, MyHttpUtilsResource);
 define_resource_tool!(MyWebSocketsWasmReadmeTool, MyWebSocketsWasmResource);
+define_resource_tool!(WasmOptimizationTool, WasmOptimizationResource);

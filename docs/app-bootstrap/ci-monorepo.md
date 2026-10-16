@@ -252,7 +252,8 @@ three seconds. A registry image has no ref scoping — written once, read by eve
 
 **Not for Dioxus WASM builds** (`dashboards-ui` and friends) — own toolchain, own `dx build`, built
 inside the `ghcr.io/my-jet-tools/dioxus-docker` container instead. Different problem, different fix: see the
-Dioxus client-side bootstrap guide (`get_dioxus_client_side_bootstrap_guide`, topic `ci`) for that workflow.
+Dioxus client-side bootstrap guide (`get_dioxus_client_side_bootstrap_guide`, topic `ci`) for that workflow,
+and the WASM optimization guide (`get_wasm_optimization_guide`) for its release build.
 
 **Placeholders to replace:**
 - `{service-name}` — crate name from `Cargo.toml` (e.g. `price-feed-binance`)

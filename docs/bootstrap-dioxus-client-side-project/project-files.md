@@ -36,6 +36,14 @@ js-sys = { version = "*" }
 
 [build-dependencies]
 ci-utils = { git = "https://github.com/MyJetTools/ci-utils.git", tag = "0.1.3" }
+
+# dx builds the release bundle under `wasm-release`, not `release`.
+# Why, and what each line gives: get_wasm_optimization_guide
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
 ```
 
 Key differences from fullstack:

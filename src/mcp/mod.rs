@@ -65,3 +65,5 @@ mod my_http_utils_resource;
 pub use my_http_utils_resource::*;
 mod my_web_sockets_wasm_resource;
 pub use my_web_sockets_wasm_resource::*;
+mod wasm_optimization_resource;
+pub use wasm_optimization_resource::*;

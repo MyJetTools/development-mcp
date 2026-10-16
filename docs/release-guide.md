@@ -90,6 +90,32 @@ steps were skipped. If the cold steps ran, the pull failed — check that the im
 Dioxus WASM services (`dx build`) do not use the builder image at all — they build inside the
 `ghcr.io/my-jet-tools/dioxus-docker` container instead. See the Dioxus client-side bootstrap guide.
 
+### Dioxus — the production release ships an optimised `.wasm`
+
+**Every production release of a Dioxus project** — a client-side app, or the web half of a
+fullstack app — goes through this step before `gh release create`. Fetch the WASM optimization
+guide (`get_wasm_optimization_guide`) and check the project against its checklist:
+
+1. Every release `dx build` / `dx bundle` — the local build script and the CI workflow — has
+   `--debug-symbols false`. Without it the bundle keeps its debug info: +38% of the module.
+2. `Cargo.toml` has `[profile.wasm-release]` with `opt-level = "z"`, `lto = true`,
+   `codegen-units = 1`. Settings for the bundle in `[profile.release]` do not count — dx builds the
+   web bundle under `wasm-release`.
+3. No `strip` and no `panic = "abort"` in any profile.
+4. The build fails when wasm-opt fails: `grep "wasm-opt failed"` over the `dx build` output — dx
+   itself succeeds and ships the bundle unoptimised.
+
+A project that does not pass is fixed first, and the fix is released — never a release that
+knowingly ships an unoptimised bundle.
+
+After the run: the build log has no `wasm-opt failed` line. A local release build prints the size
+of the `.wasm` and of its gzip; compare them with the bundle it replaces.
+
+A single-repo fullstack service builds with the workflow `ci-utils` generates, which runs
+`dx bundle` without `--debug-symbols false` (known gap of `ci-utils` 0.1.3). Do not hand-edit the
+generated file — tell the user that the released bundle keeps its debug info until `ci-utils` is
+fixed.
+
 ### Version extraction
 
 The workflow extracts the version from the tag by stripping the `{service-name}-` prefix:

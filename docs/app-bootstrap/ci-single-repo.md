@@ -51,6 +51,10 @@ fn main() {
 - Only add `.with_ci_test()` if the project has at least one `#[test]`
 - Never use `tonic_build` directly — always via `ci_utils::ProtoFileBuilder`
 - Run `cargo build` once after creating `build.rs` — it generates `.github/workflows/release.yaml` and `Dockerfile`
+- Dioxus fullstack: the workflow `ci-utils` 0.1.3 generates runs `dx bundle --web --release`
+  without `--debug-symbols false`, so the web bundle keeps its debug info. The bundle settings are
+  `[profile.wasm-release]`, never `[profile.release]` — see the WASM optimization guide
+  (`get_wasm_optimization_guide`)
 - The pre-baked builder image described in topic `ci-monorepo` is **monorepo-only**. A
   single-repo service keeps the generated workflow as it is — do not hand-edit a `ci-utils`-generated
   file, it is overwritten on the next `cargo build`
