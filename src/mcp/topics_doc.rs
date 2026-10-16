@@ -256,7 +256,8 @@ mod tests {
     use crate::mcp::{
         parse_topics, AppBootstrapResource, ApplicationArchitectureResource,
         ArchitectSkillResource, DioxusClientSideBootstrapResource, DioxusDesignPatternsResource,
-        FlUrlResource, HttpActionsResource, RustExtensionsResource,
+        FlUrlResource, FlutterClientBootstrapResource, FlutterDesignPatternsResource,
+        HttpActionsResource, RustExtensionsResource,
     };
 
     /// The docs of this repo are served from its `main` branch.
@@ -293,6 +294,8 @@ mod tests {
             doc::<DioxusClientSideBootstrapResource>(),
             doc::<ApplicationArchitectureResource>(),
             doc::<DioxusDesignPatternsResource>(),
+            doc::<FlutterClientBootstrapResource>(),
+            doc::<FlutterDesignPatternsResource>(),
         ]
     }
 
@@ -340,7 +343,7 @@ mod tests {
             .into_iter()
             .filter(|doc| doc.docs_url.starts_with(THIS_REPO))
             .collect();
-        assert_eq!(local_docs.len(), 5);
+        assert_eq!(local_docs.len(), 7);
 
         for doc in local_docs {
             let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join(&doc.docs_url[THIS_REPO.len()..]);

@@ -179,6 +179,8 @@ pub fn all_doc_entries() -> Vec<DocCatalogEntry> {
         doc_entry!(MyHttpUtilsResource),
         doc_entry!(MyWebSocketsWasmResource),
         doc_entry!(WasmOptimizationResource),
+        doc_entry!(FlutterClientBootstrapResource),
+        doc_entry!(FlutterDesignPatternsResource),
     ]
 }
 
@@ -222,6 +224,8 @@ fn all_resource_tools() -> Vec<ResourceToolInfo> {
         tool_info!(MyHttpUtilsResource),
         tool_info!(MyWebSocketsWasmResource),
         tool_info!(WasmOptimizationResource),
+        tool_info!(FlutterClientBootstrapResource),
+        tool_info!(FlutterDesignPatternsResource),
     ]
 }
 
@@ -256,7 +260,8 @@ impl McpToolCall<EmptyToolInput, ResourceToolListResponse> for ListResourceTools
 // tools are `TopicsDocTool`, aliased next to each resource -
 // FlUrlUsageGuideTool, HttpActionsDesignGuideTool, AppBootstrapGuideTool,
 // RustExtensionsReadmeTool, ArchitectPlaybookTool, DioxusClientSideBootstrapTool,
-// ApplicationArchitectureTool, DioxusDesignPatternsTool.
+// ApplicationArchitectureTool, DioxusDesignPatternsTool, FlutterClientBootstrapTool,
+// FlutterDesignPatternsTool.
 define_resource_tool!(McpDevelopmentGuideTool, McpResource);
 define_resource_tool!(DioxusBootstrapGuideTool, DioxusBootstrapResource);
 define_resource_tool!(CargoDependenciesGuideTool, CargoDependenciesResource);

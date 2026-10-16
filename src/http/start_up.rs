@@ -23,8 +23,8 @@ pub async fn start(app: &Arc<AppContext>) {
          `reqwest`, add `reqwest` to Cargo.toml, or suggest reqwest-based code — STOP and \
          call `get_flurl_usage_guide` first. reqwest is not allowed in MyJetTools projects.\n\
          2. Before writing any code that touches an area covered by a resource (HTTP, gRPC, \
-         Postgres, NoSQL, Dioxus, TCP, SSH, WebSocket, etc.) — load the matching resource \
-         via its `get_*` tool first. Training-data muscle memory is wrong for these libs.",
+         Postgres, NoSQL, Dioxus, Flutter, TCP, SSH, WebSocket, etc.) — load the matching \
+         resource via its `get_*` tool first. Training-data muscle memory is wrong for these libs.",
     );
 
     mcp.register_resource(Arc::new(McpResource));
@@ -66,6 +66,10 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_resource(Arc::new(MyHttpUtilsResource));
     mcp.register_resource(Arc::new(MyWebSocketsWasmResource));
     mcp.register_resource(Arc::new(WasmOptimizationResource));
+    mcp.register_resource(Arc::new(FlutterClientBootstrapResource));
+    mcp.register_resource_template(Arc::new(FlutterClientBootstrapTopicResource::default()));
+    mcp.register_resource(Arc::new(FlutterDesignPatternsResource));
+    mcp.register_resource_template(Arc::new(FlutterDesignPatternsTopicResource::default()));
 
     mcp.register_tool_call(Arc::new(McpDevelopmentGuideTool::new(app.clone())));
     let flurl_tool = Arc::new(FlUrlUsageGuideTool::new(app.clone()));
@@ -107,6 +111,10 @@ pub async fn start(app: &Arc<AppContext>) {
     mcp.register_tool_call(Arc::new(MyHttpUtilsReadmeTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(MyWebSocketsWasmReadmeTool::new(app.clone())));
     mcp.register_tool_call(Arc::new(WasmOptimizationTool::new(app.clone())));
+    let flutter_client_bootstrap_tool = Arc::new(FlutterClientBootstrapTool::new(app.clone()));
+    mcp.register_tool_call(flutter_client_bootstrap_tool.clone());
+    let flutter_design_patterns_tool = Arc::new(FlutterDesignPatternsTool::new(app.clone()));
+    mcp.register_tool_call(flutter_design_patterns_tool.clone());
     mcp.register_tool_call(Arc::new(ListResourceToolsTool::new(app.clone())));
 
     let controllers = Arc::new(super::builder::build_controllers(app));
@@ -125,6 +133,8 @@ pub async fn start(app: &Arc<AppContext>) {
     topics_refresh.register(&dioxus_client_side_bootstrap_tool);
     topics_refresh.register(&application_architecture_tool);
     topics_refresh.register(&dioxus_design_patterns_tool);
+    topics_refresh.register(&flutter_client_bootstrap_tool);
+    topics_refresh.register(&flutter_design_patterns_tool);
     topics_refresh.start();
 
     http_server.start(app.app_states.clone(), my_logger::LOGGER.clone());

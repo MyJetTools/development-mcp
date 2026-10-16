@@ -67,3 +67,7 @@ mod my_web_sockets_wasm_resource;
 pub use my_web_sockets_wasm_resource::*;
 mod wasm_optimization_resource;
 pub use wasm_optimization_resource::*;
+mod flutter_client_bootstrap_resource;
+pub use flutter_client_bootstrap_resource::*;
+mod flutter_design_patterns_resource;
+pub use flutter_design_patterns_resource::*;
