@@ -436,6 +436,8 @@ PageComponent              ← PageState: input, selected item, tab, ui flags
     └── TabC { id, cs }    ← parent Signal if parent needs to trigger reset
 ```
 
+A tab in the address is an enum in the route, see `get_dioxus_client_side_bootstrap_guide`, topic `routing`.
+
 ## 12) API calls — always full path, never `use`
 
 ```rust

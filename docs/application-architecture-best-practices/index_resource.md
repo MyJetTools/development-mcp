@@ -140,6 +140,98 @@ match msg_id {
 
 ---
 
+## Types Over Magic Values
+
+**NEVER** write a string or a number that names something from a closed set: a status, a kind, a route or a tab, a table, a key, an event, a role.
+**ALWAYS** give the set a type, an enum or a newtype, and keep its text or number in ONE place, beside the type.
+
+> **WHY:** The compiler reads types and does not read strings. A typo in an address, a key or a status compiles and ships, and is found by whoever opens that page. A renamed variant moves every use; a renamed string moves none. And the exhaustive `match` above works only on an enum: a new variant names every site that must change, a new string names none.
+
+```rust
+// ❌ WRONG — a typo compiles, and what 3 means is in someone's memory
+pub struct Order {
+    pub status: String,
+    pub maker_id: u16,
+}
+
+if order.status == "filed" {
+    settle(&order);
+}
+if order.maker_id == 3 {
+    route_to_okx(&order);
+}
+
+// ✅ CORRECT — the set is a type, and the compiler checks every use
+#[derive(Clone, Copy)]
+pub enum OrderStatus {
+    Placed,
+    Filled,
+    Cancelled,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct MakerId(u16);
+
+impl MakerId {
+    pub const OKX: Self = Self(3);
+}
+
+pub struct Order {
+    pub status: OrderStatus,
+    pub maker_id: MakerId,
+}
+
+if matches!(order.status, OrderStatus::Filled) {
+    settle(&order);
+}
+if order.maker_id == MakerId::OKX {
+    route_to_okx(&order);
+}
+```
+
+**An enum closes a set, a newtype only names it.** The field of `MakerId` is private, so `MakerId(99)` does not compile outside its module, but a `match` on it still needs `_`. A newtype is for a set that grows without a build: a number with no constant is a member this build was not told about, and it is carried on as it came. Everything else is an enum.
+
+**The text lives beside the type.** One method holds it, and everything else goes through the type, parsing too: a second `match` over the strings is a second place the text lives.
+
+```rust
+impl OrderStatus {
+    pub const ALL: [Self; 3] = [Self::Placed, Self::Filled, Self::Cancelled];
+
+    // The ONE place the text of a status lives
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Placed => "placed",
+            Self::Filled => "filled",
+            Self::Cancelled => "cancelled",
+        }
+    }
+}
+
+impl std::str::FromStr for OrderStatus {
+    type Err = String;
+
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        Self::ALL
+            .into_iter()
+            .find(|status| status.as_str() == text)
+            .ok_or_else(|| format!("no status `{text}`"))
+    }
+}
+```
+
+**Strings and numbers stay at the edges.** What arrives from a URL, JSON, a table or a bus is parsed into the type where it enters and written back where it leaves. A value the type does not know is refused there, never carried on as a default: a default turns a typo into the wrong page, and nobody sees it.
+
+**When a library takes a string, look for the way to hand it your type** before writing the string: a trait, a derive, a generic parameter (`FromStr`, serde, `MyHttpStringEnum`, `ToRouteSegments` for a Dioxus route). A typed way that takes more code is still the way. If there is none, or it costs something real, say what it costs and decide it with the user.
+
+**Also fine:**
+- Open sets: a name, an instrument id, a broker's symbol, anything the data decides.
+- A number that is plain arithmetic: `0`, `1`, `len() - 1`. A number with a meaning gets a named `const`.
+- Literals in tests.
+- A default for a setting read back from browser storage: there is nobody to refuse it to, and an older build may have written it.
+
+---
+
 ## Logging Levels
 
 Use `my_logger::LOGGER` with the correct level. Choosing the wrong level is a bug.

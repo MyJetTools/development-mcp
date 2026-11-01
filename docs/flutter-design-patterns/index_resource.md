@@ -790,6 +790,21 @@ return switch (app.dialog) {
 A wildcard is fine on an open domain — a `String`, an `int`, an unknown id from the server, an
 `Object?` error.
 
+### Types over magic values
+
+The twin of `Types Over Magic Values`. A closed set is an `enum` matched by an exhaustive `switch`,
+never a `String` or an `int`, and its text lives in one place beside it.
+
+```dart
+// ❌ WRONG — a typo compiles
+if (order.status == 'filed') settle(order);
+
+// ✅ CORRECT
+enum OrderStatus { placed, filled, cancelled }
+
+if (order.status == OrderStatus.filled) settle(order);
+```
+
 ### Logging
 
 No `Info` / `Debug` noise by default. `debugPrint` is the twin of `console_log` — for what a

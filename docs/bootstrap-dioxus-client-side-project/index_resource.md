@@ -75,7 +75,7 @@ Every part of the skeleton is a topic. Bootstrapping a new project means going t
 | Topic | What is inside |
 | --- | --- |
 | [`project-files`](project-files.md) | `Cargo.toml` (`dioxus/web`, `dioxus-utils` with `web`, FlUrl, `rest-api-shared`, `my-web-sockets-wasm`), `Dioxus.toml`, CSS compilation in `build.rs` |
-| [`routing`](routing.md) | `main.rs`: the panic hook, the route enum, pre-auth and post-auth pages, the `App` component that kicks off the WebSocket; `AppState` and `LocationState` |
+| [`routing`](routing.md) | `main.rs`: the panic hook, the route enum, pre-auth and post-auth pages, the `App` component that kicks off the WebSocket; `AppState` and `LocationState`; tabs as an enum in the route |
 | [`websocket`](websocket.md) | Browser WebSocket via `my-web-sockets-wasm` (`WsCallback` + `WebSocketClient`, auto-reconnect) with the token in the query string; the `event_id:json_payload` wire format and its handler |
 | [`shared-wire-models`](shared-wire-models.md) | The `rest-api-shared` crate shared verbatim with the REST-API server: request / response derives, WASM-clean with a `server` feature, pure-data models |
 | [`api-calls`](api-calls.md) | FlUrl with relative `/api/...` URLs and shared `MyHttpInput` models; the three centralized response helpers; `RequestError` and client view-state models |

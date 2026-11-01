@@ -159,3 +159,80 @@ pub enum LocationState {
     Logout,
 }
 ```
+
+## Tabs — an enum in the route, never a string
+
+A tab of a page is a closed set, so it is typed (`Types Over Magic Values`, `get_application_architecture_best_practices`). An address is built from `AppRoute`, never written as text.
+
+```rust
+// ❌ WRONG — the compiler sees neither the tab nor the address, and a typo opens the first tab
+#[route("/okx-settings/:..tab")]
+OkxSettings { tab: Vec<String> },
+
+navigator().push("/okx-settings/bid-ask");
+
+// ✅ CORRECT
+#[route("/okx-settings/:..tab")]
+OkxSettings { tab: OkxTab },
+#[route("/:..rest")]
+NotFound { rest: Vec<String> },
+
+navigator().push(AppRoute::OkxSettings { tab: OkxTab::BidAsk });
+```
+
+A `:..` segment takes any type with `ToRouteSegments` and `FromRouteSegments`:
+
+```rust
+use dioxus::router::routable::{FromRouteSegments, ToRouteSegments};
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum OkxTab {
+    Instruments,
+    Maps,
+    BidAsk,
+}
+
+impl OkxTab {
+    pub const ALL: [Self; 3] = [Self::Instruments, Self::Maps, Self::BidAsk];
+
+    // The ONE place the text of a tab lives. None: the page's own address.
+    fn segment(self) -> Option<&'static str> {
+        match self {
+            Self::Instruments => None,
+            Self::Maps => Some("maps"),
+            Self::BidAsk => Some("bid-ask"),
+        }
+    }
+}
+
+impl ToRouteSegments for OkxTab {
+    fn display_route_segments(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.segment() {
+            // WITH the slash: the route writes `/okx-settings`, then this
+            Some(segment) => write!(f, "/{segment}"),
+            None => Ok(()),
+        }
+    }
+}
+
+impl FromRouteSegments for OkxTab {
+    type Err = String;
+
+    fn from_route_segments(segments: &[&str]) -> Result<Self, Self::Err> {
+        let tail = segments.join("/");
+        Self::ALL
+            .into_iter()
+            .find(|tab| tab.segment().unwrap_or_default() == tail)
+            .ok_or_else(|| format!("no tab `{tail}`"))
+    }
+}
+```
+
+- The two traits are not in `dioxus::prelude`.
+- `display_route_segments` writes the leading `/`, whatever the trait's doc comment says. Without it the address is `/okx-settingsmaps`.
+- The tab of the page's own address writes nothing. `/okx-settings` and `/okx-settings/` both arrive as that tab.
+- An unknown tab is an `Err`: the route does not match, and the address goes to the catch-all `NotFound`. It never opens another tab. So keep the catch-all route.
+- The route component stays when only the tab changes, and its hooks do not run again. Pass the tab down as a prop: a `use_context_provider` there keeps the first tab.
+- `from_route_segments` reads `ALL`, and the compiler does not check it: a variant left out of it compiles, and its address goes to `NotFound`. Let the tab strip draw `ALL`, filtered where a tab is hidden from someone, and the gap is seen at once.
+- `dx build --wasm-split` with the cargo feature `dioxus/wasm-split` makes every variant of the route enum a wasm module. The flag alone builds no modules and says nothing. Link with `RUSTFLAGS="-C link-arg=-O0"`: without it wasm-ld merges constants, and the split zeroes bytes another module reads.
+- A variant per tab that draws the whole page is a module per tab, each with the whole page in it: dx 0.7.10 copies into both modules what two routes share and the main module does not. One variant with a typed tab is one module a page, and opening one tab brings all its tabs.
