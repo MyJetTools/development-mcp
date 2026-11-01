@@ -60,6 +60,10 @@ fullstack project too.
 runs `dx bundle --web --release` without it — a fullstack bundle built by that
 workflow keeps its debug info until the template in `ci-utils` is fixed.
 
+`dx build --wasm-split` splits a bundle into a module per route. It needs the
+cargo feature `dioxus/wasm-split` and a special link flag, see
+`get_dioxus_client_side_bootstrap_guide`, topic `routing`.
+
 ## 2. `[profile.wasm-release]`, not `[profile.release]`
 
 dx builds every platform in its own cargo profile: `wasm-release` for the web
