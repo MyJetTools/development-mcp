@@ -116,3 +116,4 @@ dx build --package your-project-name
 14. **Never put `///` doc-comments on `MyHttpInput` / `MyHttpObjectStructure` struct fields** — the proc-macro panics; use the `description = "..."` attribute instead
 15. **`dioxus_utils::set_panic_hook()` is the first line of `main()`** — a release build prints no panic text without it, only `RuntimeError: unreachable` in the browser console
 16. **Release bundle size** — `--debug-symbols false` on every release `dx build`, and the `[profile.wasm-release]` of topic `project-files`. Why, the numbers, the build script and how to verify it: `get_wasm_optimization_guide`. Every production release goes through its checklist first (`get_release_guide`)
+17. **The page before the wasm** — `index.html` in the crate root, with `#boot-loader` beside `#main`, never inside. See `get_wasm_optimization_guide`, section 11
